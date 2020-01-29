@@ -4,10 +4,18 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
+class ComposerStaticInitff355df05f66d18e661faaa1e53082bf
 {
     public static $files = array (
-        'd5e184bb3537ab5eb44dbd1454cfd70b' => __DIR__ . '/..' . '/hoa/core/Core.php',
+        'e88992873b7765f9b5710cab95ba5dd7' => __DIR__ . '/..' . '/hoa/consistency/Prelude.php',
+        '320cde22f66dd4f5d3fd621d3e88b98f' => __DIR__ . '/..' . '/symfony/polyfill-ctype/bootstrap.php',
+        '3e76f7f02b41af8cea96018933f6b7e3' => __DIR__ . '/..' . '/hoa/protocol/Wrapper.php',
+        '7b11c4dc42b3b3023073cb14e519683c' => __DIR__ . '/..' . '/ralouphie/getallheaders/src/getallheaders.php',
+        'a0edc8309cc5e1d60e3047b5df6b7052' => __DIR__ . '/..' . '/guzzlehttp/psr7/src/functions_include.php',
+        'ddc0a4d7e61c0286f0f8593b1903e894' => __DIR__ . '/..' . '/clue/stream-filter/src/functions.php',
+        '8cff32064859f4559445b89279f3199c' => __DIR__ . '/..' . '/php-http/message/src/filters.php',
+        'c964ee0ededf28c96ebd9db5099ef910' => __DIR__ . '/..' . '/guzzlehttp/promises/src/functions_include.php',
+        '37a3dc5111fe8f707ab4c132ef1dbc62' => __DIR__ . '/..' . '/guzzlehttp/guzzle/src/functions_include.php',
         'ad155f8f1cf0d418fe49e248db8c661b' => __DIR__ . '/..' . '/react/promise/src/functions_include.php',
         '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
         '25072dd6e2470089de65ae7bf11d3109' => __DIR__ . '/..' . '/symfony/polyfill-php72/bootstrap.php',
@@ -23,7 +31,6 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
         ),
         'Z' => 
         array (
-            'Zend\\Stdlib\\' => 12,
             'Zend\\Escaper\\' => 13,
         ),
         'W' => 
@@ -34,9 +41,11 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
         array (
             'Symfony\\Polyfill\\Php72\\' => 23,
             'Symfony\\Polyfill\\Mbstring\\' => 26,
+            'Symfony\\Polyfill\\Ctype\\' => 23,
             'Symfony\\Component\\Yaml\\' => 23,
             'Symfony\\Component\\VarDumper\\' => 28,
-            'Symfony\\Component\\EventDispatcher\\' => 34,
+            'Symfony\\Component\\OptionsResolver\\' => 34,
+            'Stash\\' => 6,
         ),
         'R' => 
         array (
@@ -45,9 +54,13 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
         'P' => 
         array (
             'Psr\\Log\\' => 8,
+            'Psr\\Http\\Message\\' => 17,
+            'Psr\\Cache\\' => 10,
             'PhpOffice\\PhpWord\\' => 18,
             'PhpOffice\\PhpPresentation\\' => 26,
             'PhpOffice\\Common\\' => 17,
+            'PasswordPolicy\\Tests\\' => 21,
+            'PasswordPolicy\\' => 15,
         ),
         'M' => 
         array (
@@ -55,20 +68,34 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
         ),
         'H' => 
         array (
+            'Http\\Promise\\' => 13,
+            'Http\\Message\\' => 13,
+            'Http\\Discovery\\' => 15,
+            'Http\\Client\\Common\\Plugin\\' => 26,
+            'Http\\Client\\Common\\' => 19,
+            'Http\\Client\\' => 12,
+            'Http\\Adapter\\Guzzle6\\' => 21,
+            'Hoa\\Zformat\\' => 12,
             'Hoa\\Visitor\\' => 12,
             'Hoa\\Ustring\\' => 12,
             'Hoa\\Stream\\' => 11,
             'Hoa\\Regex\\' => 10,
+            'Hoa\\Protocol\\' => 13,
             'Hoa\\Math\\' => 9,
             'Hoa\\Iterator\\' => 13,
             'Hoa\\File\\' => 9,
-            'Hoa\\Core\\' => 9,
+            'Hoa\\Exception\\' => 14,
+            'Hoa\\Event\\' => 10,
+            'Hoa\\Consistency\\' => 16,
             'Hoa\\Compiler\\' => 13,
         ),
         'G' => 
         array (
             'GuzzleHttp\\Stream\\' => 18,
             'GuzzleHttp\\Ring\\' => 16,
+            'GuzzleHttp\\Psr7\\' => 16,
+            'GuzzleHttp\\Promise\\' => 19,
+            'GuzzleHttp\\' => 11,
             'Github\\' => 7,
         ),
         'F' => 
@@ -86,6 +113,10 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
             'DeepCopy\\' => 9,
             'DebugBar\\' => 9,
         ),
+        'C' => 
+        array (
+            'Clue\\StreamFilter\\' => 18,
+        ),
     );
 
     public static $prefixDirsPsr4 = array (
@@ -94,10 +125,6 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
             0 => __DIR__ . '/..' . '/phpdocumentor/reflection-common/src',
             1 => __DIR__ . '/..' . '/phpdocumentor/reflection-docblock/src',
             2 => __DIR__ . '/..' . '/phpdocumentor/type-resolver/src',
-        ),
-        'Zend\\Stdlib\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/zendframework/zend-stdlib/src',
         ),
         'Zend\\Escaper\\' => 
         array (
@@ -115,6 +142,10 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-mbstring',
         ),
+        'Symfony\\Polyfill\\Ctype\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/polyfill-ctype',
+        ),
         'Symfony\\Component\\Yaml\\' => 
         array (
             0 => __DIR__ . '/..' . '/symfony/yaml',
@@ -123,9 +154,13 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
         array (
             0 => __DIR__ . '/..' . '/symfony/var-dumper',
         ),
-        'Symfony\\Component\\EventDispatcher\\' => 
+        'Symfony\\Component\\OptionsResolver\\' => 
         array (
-            0 => __DIR__ . '/..' . '/symfony/event-dispatcher',
+            0 => __DIR__ . '/..' . '/symfony/options-resolver',
+        ),
+        'Stash\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/tedivm/stash/src/Stash',
         ),
         'React\\Promise\\' => 
         array (
@@ -134,6 +169,14 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
         'Psr\\Log\\' => 
         array (
             0 => __DIR__ . '/..' . '/psr/log/Psr/Log',
+        ),
+        'Psr\\Http\\Message\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/http-message/src',
+        ),
+        'Psr\\Cache\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/cache/src',
         ),
         'PhpOffice\\PhpWord\\' => 
         array (
@@ -147,9 +190,50 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
         array (
             0 => __DIR__ . '/..' . '/phpoffice/common/src/Common',
         ),
+        'PasswordPolicy\\Tests\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/joshralph/password-policy/tests',
+        ),
+        'PasswordPolicy\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/joshralph/password-policy/src/PasswordPolicy',
+        ),
         'Monolog\\' => 
         array (
             0 => __DIR__ . '/..' . '/monolog/monolog/src/Monolog',
+        ),
+        'Http\\Promise\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/php-http/promise/src',
+        ),
+        'Http\\Message\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/php-http/message/src',
+            1 => __DIR__ . '/..' . '/php-http/message-factory/src',
+        ),
+        'Http\\Discovery\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/php-http/discovery/src',
+        ),
+        'Http\\Client\\Common\\Plugin\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/php-http/cache-plugin/src',
+        ),
+        'Http\\Client\\Common\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/php-http/client-common/src',
+        ),
+        'Http\\Client\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/php-http/httplug/src',
+        ),
+        'Http\\Adapter\\Guzzle6\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/php-http/guzzle6-adapter/src',
+        ),
+        'Hoa\\Zformat\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/hoa/zformat',
         ),
         'Hoa\\Visitor\\' => 
         array (
@@ -167,6 +251,10 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
         array (
             0 => __DIR__ . '/..' . '/hoa/regex',
         ),
+        'Hoa\\Protocol\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/hoa/protocol',
+        ),
         'Hoa\\Math\\' => 
         array (
             0 => __DIR__ . '/..' . '/hoa/math',
@@ -179,9 +267,17 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
         array (
             0 => __DIR__ . '/..' . '/hoa/file',
         ),
-        'Hoa\\Core\\' => 
+        'Hoa\\Exception\\' => 
         array (
-            0 => __DIR__ . '/..' . '/hoa/core',
+            0 => __DIR__ . '/..' . '/hoa/exception',
+        ),
+        'Hoa\\Event\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/hoa/event',
+        ),
+        'Hoa\\Consistency\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/hoa/consistency',
         ),
         'Hoa\\Compiler\\' => 
         array (
@@ -194,6 +290,18 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
         'GuzzleHttp\\Ring\\' => 
         array (
             0 => __DIR__ . '/..' . '/guzzlehttp/ringphp/src',
+        ),
+        'GuzzleHttp\\Psr7\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/guzzlehttp/psr7/src',
+        ),
+        'GuzzleHttp\\Promise\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/guzzlehttp/promises/src',
+        ),
+        'GuzzleHttp\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/guzzlehttp/guzzle/src',
         ),
         'Github\\' => 
         array (
@@ -222,6 +330,10 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
         'DebugBar\\' => 
         array (
             0 => __DIR__ . '/..' . '/maximebf/debugbar/src/DebugBar',
+        ),
+        'Clue\\StreamFilter\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/clue/stream-filter/src',
         ),
     );
 
@@ -259,17 +371,6 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
                 0 => __DIR__ . '/..' . '/ezyang/htmlpurifier/library',
             ),
         ),
-        'G' => 
-        array (
-            'Guzzle\\Tests' => 
-            array (
-                0 => __DIR__ . '/..' . '/guzzle/guzzle/tests',
-            ),
-            'Guzzle' => 
-            array (
-                0 => __DIR__ . '/..' . '/guzzle/guzzle/src',
-            ),
-        ),
         'F' => 
         array (
             'File' => 
@@ -284,20 +385,28 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
                 0 => __DIR__ . '/..' . '/easyrdf/easyrdf/lib',
             ),
         ),
-        'D' => 
-        array (
-            'Doctrine\\Common\\Cache\\' => 
-            array (
-                0 => __DIR__ . '/..' . '/doctrine/cache/lib',
-            ),
-        ),
         'C' => 
         array (
+            'Console' => 
+            array (
+                0 => __DIR__ . '/..' . '/pear/console_getopt',
+            ),
             'CollectiveAccessService' => 
             array (
                 0 => __DIR__ . '/..' . '/collectiveaccess/service-wrapper/src',
             ),
         ),
+        'A' => 
+        array (
+            'Archive_Tar' => 
+            array (
+                0 => __DIR__ . '/..' . '/pear/archive_tar',
+            ),
+        ),
+    );
+
+    public static $fallbackDirsPsr0 = array (
+        0 => __DIR__ . '/..' . '/pear/pear-core-minimal/src',
     );
 
     public static $classMap = array (
@@ -775,10 +884,11 @@ class ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038::$prefixDirsPsr4;
-            $loader->prefixesPsr0 = ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038::$prefixesPsr0;
-            $loader->classMap = ComposerStaticInit3e0fc9511f6531b483c5ff95876a4038::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInitff355df05f66d18e661faaa1e53082bf::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInitff355df05f66d18e661faaa1e53082bf::$prefixDirsPsr4;
+            $loader->prefixesPsr0 = ComposerStaticInitff355df05f66d18e661faaa1e53082bf::$prefixesPsr0;
+            $loader->fallbackDirsPsr0 = ComposerStaticInitff355df05f66d18e661faaa1e53082bf::$fallbackDirsPsr0;
+            $loader->classMap = ComposerStaticInitff355df05f66d18e661faaa1e53082bf::$classMap;
 
         }, null, ClassLoader::class);
     }

@@ -12,10 +12,10 @@ return array(
     'PHPExcel' => array($vendorDir . '/phpoffice/phpexcel/Classes'),
     'PEAR' => array($vendorDir . '/pear/pear_exception'),
     'HTMLPurifier' => array($vendorDir . '/ezyang/htmlpurifier/library'),
-    'Guzzle\\Tests' => array($vendorDir . '/guzzle/guzzle/tests'),
-    'Guzzle' => array($vendorDir . '/guzzle/guzzle/src'),
     'File' => array($vendorDir . '/pear/file_marc'),
     'EasyRdf_' => array($vendorDir . '/easyrdf/easyrdf/lib'),
-    'Doctrine\\Common\\Cache\\' => array($vendorDir . '/doctrine/cache/lib'),
+    'Console' => array($vendorDir . '/pear/console_getopt'),
     'CollectiveAccessService' => array($vendorDir . '/collectiveaccess/service-wrapper/src'),
+    'Archive_Tar' => array($vendorDir . '/pear/archive_tar'),
+    '' => array($vendorDir . '/pear/pear-core-minimal/src'),
 );
