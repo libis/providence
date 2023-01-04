@@ -650,7 +650,7 @@ class SearchResult extends BaseObject {
 		
 		
 		foreach($va_row_ids as $vn_row_id) {
-			if(is_array($va_related_items = self::$s_rel_prefetch_cache[$this->ops_table_name][$vn_row_id][$ps_tablename][$vs_opt_md5])) {
+			if(is_array($va_related_items = (self::$s_rel_prefetch_cache[$this->ops_table_name][$vn_row_id][$ps_tablename][$vs_opt_md5] ?? null))) {
 				$va_base_row_ids[$vn_row_id] = caExtractValuesFromArrayList($va_related_items, $t_rel_instance->primaryKey());
 				$va_related_ids += $va_base_row_ids[$vn_row_id];
 				$pa_cache[$this->ops_table_name][$vn_row_id][$ps_tablename][$vs_opt_md5] = $va_base_row_ids[$vn_row_id];
@@ -2252,6 +2252,12 @@ class SearchResult extends BaseObject {
 				
 				$vb_did_return_value = false;
 				$vb_return_value_id = ($va_path_components['components'][sizeof($va_path_components['components'])-1] === 'value_id');
+				$vb_return_source = ($va_path_components['components'][sizeof($va_path_components['components'])-1] === '__source__');
+				
+				if ($vb_return_source) {
+					$va_return_values[(int)$vn_id][] = $o_attribute->getValueSource();
+					continue;
+				}
 
 				foreach($va_values as $o_value) {
 					$vs_val_proc = null;
@@ -2511,9 +2517,9 @@ class SearchResult extends BaseObject {
 					}
 				}
 				
-				if ($va_path_components['subfield_name'] && $pa_options['returnBlankValues'] && !$vb_did_return_value) {
+				if (isset($va_path_components['subfield_name']) && isset($pa_options['returnBlankValues']) && (bool)$pa_options['returnBlankValues']  && !$vb_did_return_value) {
 					// value is missing so insert blank
-					if ($pa_options['returnWithStructure']) {
+					if ($pa_options['returnWithStructure'] ?? false) {
 						$va_return_values[(int)$vn_id][$vm_locale_id][(int)$o_attribute->getAttributeID()][$va_path_components['subfield_name']] = '';
 						if($include_value_ids) {
 							$va_return_values[(int)$vn_id][$vm_locale_id][(int)$o_attribute->getAttributeID()]["{$vs_element_code}_value_id"] = null;
@@ -2545,7 +2551,7 @@ class SearchResult extends BaseObject {
 			// is blank
 			$default_value = ca_metadata_elements::getElementDefaultValue($va_path_components['subfield_name'] ? $va_path_components['subfield_name'] : $va_path_components['field_name']);
 			
-			if (($pa_options['returnWithStructure'] ?? null) && $pa_options['returnBlankValues']) {
+			if (($pa_options['returnWithStructure'] ?? null) && ($pa_options['returnBlankValues'] ?? null)) {
 				$va_return_values[(int)$vn_id][null][null][$e = $va_path_components['subfield_name'] ? $va_path_components['subfield_name'] : $va_path_components['field_name']] = $default_value;
 				if($include_value_ids) {
 					$va_return_values[(int)$vn_id][null][null]["{$e}_value_id"] = null;

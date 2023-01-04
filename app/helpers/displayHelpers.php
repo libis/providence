@@ -58,7 +58,17 @@ require_once(__CA_APP_DIR__.'/helpers/searchHelpers.php');
 		$o_config = Configuration::load();
 		$va_default_locales = $o_config->getList('locale_defaults');
 
-		$va_preferred_locales = array();
+		$va_preferred_locales = [];
+	
+		if (is_array($pa_preferred_locales)) {
+			foreach($pa_preferred_locales as $vs_preferred_locale) {
+				if(is_numeric($vs_preferred_locale)) {
+					$vs_preferred_locale = ca_locales::IDToCode($vs_preferred_locale);
+				}
+				$va_preferred_locales[$vs_preferred_locale] = true;
+			}
+		}
+		
 		$va_similar_locales = [];
 		if ($ps_item_locale) {
 			// if item locale is passed as locale_id we need to convert it to a code
@@ -76,12 +86,6 @@ require_once(__CA_APP_DIR__.'/helpers/searchHelpers.php');
 			$va_similar_locales = ca_locales::localesForLanguage($ps_item_locale, ['codesOnly' => true]);
 		}
 
-		if (is_array($pa_preferred_locales)) {
-			foreach($pa_preferred_locales as $vs_preferred_locale) {
-				$va_preferred_locales[$vs_preferred_locale] = true;
-			}
-		}
-
 		$va_fallback_locales = array();
 		if (is_array($va_default_locales)) {
 			foreach($va_default_locales as $vs_fallback_locale) {
@@ -96,7 +100,7 @@ require_once(__CA_APP_DIR__.'/helpers/searchHelpers.php');
 		    $va_fallback_locales[$vs_similar_locale] = true;
 		}
 
-		if ($g_ui_locale) {
+		if ($g_ui_locale && !is_array($va_preferred_locales) || !sizeof($va_preferred_locales)) {
 			if (!isset($va_preferred_locales[$g_ui_locale]) || !$va_preferred_locales[$g_ui_locale]) {
 				$va_preferred_locales[$g_ui_locale] = true;
 			}
@@ -733,11 +737,17 @@ jQuery(document).ready(function() {
 	 *
 	 * @return string - formated metadata for display to user
 	 */
-	function _caFormatMediaMetadataArray($pa_array, $pn_level=0, $ps_key=null) {
+	function _caFormatMediaMetadataArray($pa_array, $pn_level=0, $ps_key=null, ?array $options=null) {
 		if(!is_array($pa_array)) { return $pa_array; }
 
-		$vs_buf = "<div style='width: 100%; overflow: auto;'><table style='margin-left: ".($pn_level * 10)."px;'>";
+		$no_table = caGetOption('noTable', $options, false);
+		
+		$vs_buf = $no_table ? '' : "<div style='width: 100%; overflow: auto;'><table style='margin-left: ".($pn_level * 10)."px;'>";
 		foreach($pa_array as $vs_key => $vs_val) {
+			if(is_array($vs_val)) {
+				$vs_buf .= _caFormatMediaMetadataArray($vs_val, $pn_level++, null, ['noTable' => true]);
+				continue;
+			}
 			if (preg_match("!^Undefined!i", $vs_key)) { continue; }
 			$vs_val = preg_replace('![^A-Za-z0-9 \-_\+\!\@\#\$\%\^\&\*\(\)\[\]\{\}\?\<\>\,\.\"\'\=]+!', '', $vs_val);
 			switch($vs_key) {
@@ -753,7 +763,7 @@ jQuery(document).ready(function() {
 			}
 			$vs_buf .= "<tr><td width='130'>{$vs_key}</td><td>"._caFormatMediaMetadataArray($vs_val, $pn_level + 1, $vs_key)."</td></tr>";
 		}
-		$vs_buf .= "</table></div>\n";
+		$vs_buf .= $no_table ? '' : "</table></div>\n";
 		return $vs_buf;
 	}
 	# ------------------------------------------------------------------------------------------------
@@ -3116,7 +3126,7 @@ jQuery(document).ready(function() {
 			}
 			$va_item['relation_id'] = (int)$va_item['relation_id'] ;
 			
-			$va_initial_values[] = array_merge(
+			$va_initial_values[$va_item['relation_id']] = array_merge(
 				$va_item,
 				array(
 					'label' => $vs_display

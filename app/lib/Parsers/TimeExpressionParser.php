@@ -329,7 +329,7 @@ class TimeExpressionParser {
 							//
 							// Look for MYA dates
 							//
-							$va_peek = $this->peekToken(2);
+							if(!is_array($va_peek = $this->peekToken(2))) { break; }
 							if ($va_peek['type'] == TEP_TOKEN_MYA) {
 								$va_dates['start'] = array(
 									'month' => 1, 'day' => 1, 'year' => intval($va_token['value']) * -1000000,
@@ -694,7 +694,7 @@ class TimeExpressionParser {
 				// Look for MYA dates
 				//
 				$va_peek = $this->peekToken(2);
-				if ($va_peek['type'] == TEP_TOKEN_MYA) {
+				if ($va_peek && ($va_peek['type'] == TEP_TOKEN_MYA)) {
 					$va_dates['end'] = array(
 						'month' => 12, 'day' => 31, 'year' => intval($va_token['value']) * -1000000,
 						'hours' => null, 'minutes' => null, 'seconds' => null,
@@ -706,7 +706,7 @@ class TimeExpressionParser {
 					$vn_state = TEP_STATE_ACCEPT;
 					$vb_can_accept = true;
 					break;
-				} elseif ($va_peek['type'] == TEP_TOKEN_BP) {
+				} elseif ($va_peek && ($va_peek['type'] == TEP_TOKEN_BP)) {
 					$va_dates['end'] = array(
 						'month' => 12, 'day' => 31, 'year' => 1950 - intval($va_token['value']),
 						'hours' => null, 'minutes' => null, 'seconds' => null,
@@ -1276,7 +1276,7 @@ class TimeExpressionParser {
 										'uncertainty' => false, 'uncertainty_units' => '', 'is_circa' => $va_date_element['is_circa'], 'is_probably' => $va_date_element['is_probably']
 									);
 									
-									$va_peek = $this->peekToken();
+									if(!is_array($va_peek = $this->peekToken())) { return $va_date; }
 									switch($va_peek['type']) {
 										# ----------------------
 										case TEP_TOKEN_ERA:
@@ -1668,7 +1668,7 @@ class TimeExpressionParser {
 	private function _parseCentury($va_token, $part_of_range_qualifier=null) {
 		$va_next_token = $this->peekToken(2);
 		
-		$vs_next_token_lc = mb_strtolower($va_next_token['value']);
+		$vs_next_token_lc = mb_strtolower($va_next_token['value'] ?? null);
 		$vn_use_romans = $this->opo_datetime_settings->get("useRomanNumeralsForCenturies");
 										
 		if (
@@ -2962,7 +2962,7 @@ class TimeExpressionParser {
 					$vs_before_qualifier = $va_died_qualifiers[0];
 				} else {
 					$va_before_qualifiers = $this->opo_language_settings->getList('beforeQualifier');
-					if ($pa_options['beforeQualifier'] && in_array($pa_options['beforeQualifier'], $va_before_qualifiers)) {
+					if (isset($pa_options['beforeQualifier']) && $pa_options['beforeQualifier'] && in_array($pa_options['beforeQualifier'], $va_before_qualifiers)) {
 						$vs_before_qualifier = $pa_options['beforeQualifier'] ;
 					} else {
 						$vs_before_qualifier = $va_before_qualifiers[0];
@@ -2974,8 +2974,8 @@ class TimeExpressionParser {
 						return $vs_before_qualifier.' '. $this->_dateToText(array(
 							'year' => $va_end_pieces['year'],
 							'era' => $va_end_pieces['era'],
-							'uncertainty' => $va_end_pieces['uncertainty'],
-							'uncertainty_units' => $va_end_pieces['uncertainty_units']
+							'uncertainty' => $va_end_pieces['uncertainty'] ?? null,
+							'uncertainty_units' => $va_end_pieces['uncertainty_units'] ?? null
 						), $pa_options);
 					} else {
 						if ($va_end_pieces['day'] == $this->daysInMonth($va_end_pieces['month'], $va_end_pieces['year'])) { unset($va_end_pieces['day']); }
@@ -3473,7 +3473,7 @@ class TimeExpressionParser {
 		$vs_date = $this->_dateToText($pa_date_pieces, $pa_options);
 		
 		if (!($pa_options['timeOmit'] ?? false)) {
-			$vn_seconds = ($pa_date_pieces['hours'] * 3600) + ($pa_date_pieces['minutes'] * 60) + $pa_date_pieces['seconds'];
+			$vn_seconds = ((int)$pa_date_pieces['hours'] * 3600) + ((int)$pa_date_pieces['minutes'] * 60) + (int)$pa_date_pieces['seconds'];
 			$vs_time = $this->_timeToText($vn_seconds, $pa_options);
 			
 			return $vs_date. ' '.$vs_datetime_conjunction.' '.$vs_time;
@@ -3595,7 +3595,7 @@ class TimeExpressionParser {
 	public function &getHistoricDateParts($pn_historic_date) {
 		$va_tmp = explode('.', $pn_historic_date);
 		
-		$vn_year = $va_tmp[0];
+		$vn_year = (int)$va_tmp[0];
 		if ($vn_year < 0) {
 			$vs_era = $this->opo_language_settings->get('dateBCIndicator');
 			$vn_abs_year = abs($vn_year);

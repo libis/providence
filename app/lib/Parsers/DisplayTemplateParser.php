@@ -273,7 +273,8 @@ class DisplayTemplateParser {
 			    } catch (Exception $e) {
 			        // noop
 			    }
-				$v = DisplayTemplateParser::_processChildren($qr_res, $va_template['tree']->children, $va_val_list, array_merge($pa_options, ['returnAsArray' => $pa_options['aggregateUnique'] ?? false]));
+				$v = DisplayTemplateParser::_processChildren($qr_res, $va_template['tree']->children, $va_val_list, $o=array_merge($pa_options, ['returnAsArray' => $pa_options['aggregateUnique'] ?? false]));
+			
 				if ($pb_index_with_ids) {
 					$va_proc_templates[$qr_res->get($vs_pk)] = $v;
 				} else {
@@ -321,7 +322,7 @@ class DisplayTemplateParser {
 	 *
 	 */
 	static public function parse($ps_template, $pa_options=null) {
-		$vs_cache_key = md5($ps_template);
+		$vs_cache_key = md5($ps_template, print_r($pa_options, true));
 		if(isset(DisplayTemplateParser::$template_cache[$vs_cache_key])) { return DisplayTemplateParser::$template_cache[$vs_cache_key]; }
 		
 		$ps_template_original = $ps_template;
@@ -468,7 +469,13 @@ class DisplayTemplateParser {
 					$vb_omit_blanks = !is_null($o_node->omitBlanks) ? (bool)$o_node->omitBlanks : null;
 					$vs_filter = !is_null($o_node->filter) ? (string)$o_node->filter : null;
 					
-					$va_get_options = ['limit' => $vn_limit, 'returnAsCount' => true, 'checkAccess' => $pa_check_access, 'restrictToTypes' => $va_restrict_to_types, 'excludeTypes' => $va_exclude_types, 'restrictToRelationshipTypes' => $va_restrict_to_relationship_types, 'excludeRelationshipTypes' => $va_exclude_to_relationship_types];
+					$va_get_options = [
+						'limit' => $vn_limit, 'returnAsCount' => true, 'checkAccess' => $pa_check_access, 
+						'restrictToTypes' => $va_restrict_to_types, 'excludeTypes' => $va_exclude_types, 
+						'restrictToRelationshipTypes' => $va_restrict_to_relationship_types, 
+						'excludeRelationshipTypes' => $va_exclude_to_relationship_types,
+						'locale' => caGetOption('locale', $pa_options, null)
+					];
 					if (!is_null($vb_omit_blanks)) { 
 						$pa_options['includeBlankValuesInArray'] = $va_get_options['includeBlankValuesInArray'] = !$vb_omit_blanks; 
 					}
@@ -742,10 +749,10 @@ class DisplayTemplateParser {
 							// by allowing the restrictToTypes on the relationship to be applied on the inner unit as is required.
 							//
 							if (!is_array($va_get_options['restrictToTypes']) || !sizeof($va_get_options['restrictToTypes'])) {
-								$va_get_options['restrictToTypes'] = $pa_options['restrictToTypes'];
+								$va_get_options['restrictToTypes'] = $pa_options['restrictToTypes'] ?? null;
 							}
 							if (!is_array($va_get_options['excludeTypes']) || !sizeof($va_get_options['excludeTypes'])) {
-								$va_get_options['excludeTypes'] = $pa_options['excludeTypes'];
+								$va_get_options['excludeTypes'] = $pa_options['excludeTypes'] ?? null;
 							}
 						}
 						
@@ -940,7 +947,7 @@ class DisplayTemplateParser {
 						if ($t_instance->isRelationship() && (is_array($va_tmp = caGetTemplateTags($o_node->html(), ['firstPartOnly' => true])) && sizeof($va_tmp))) {
 							$vs_linking_context = array_shift($va_tmp);
 							if (in_array($vs_linking_context, [$t_instance->getLeftTableName(), $t_instance->getRightTableName()])) {
-								$va_linking_ids = $pr_res->get("{$vs_linking_context}.".Datamodel::primaryKey($vs_linking_context), ['returnAsArray' => true, 'primaryIDs' => $pa_options['primaryIDs']]);
+								$va_linking_ids = $pr_res->get("{$vs_linking_context}.".Datamodel::primaryKey($vs_linking_context), ['returnAsArray' => true, 'primaryIDs' => $pa_options['primaryIDs'] ?? null]);
 							}
 						}
 						
@@ -1097,6 +1104,7 @@ class DisplayTemplateParser {
                     if(is_array($va_sortables)) {
                         foreach($va_sortables as $i => $va_sort_values) {
                             if (!is_array($va_sort_values)) { continue; }
+                            if(!isset( $va_tag_vals[$vn_index]['__sort__'])) {  $va_tag_vals[$vn_index]['__sort__'] = ''; }
                             foreach($va_sort_values as $vn_index => $vs_sort_value) {
                                 $va_tag_vals[$vn_index]['__sort__'] .= $vs_sort_value;
                             }

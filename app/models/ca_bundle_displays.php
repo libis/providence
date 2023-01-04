@@ -282,8 +282,10 @@ class ca_bundle_displays extends BundlableLabelableBaseModelWithAttributes {
 	 */
 	public function duplicate($options=null) {
 		$we_set_transaction = false;
+		$o_t = null;
 		if (!$this->inTransaction()) {
-			$this->setTransaction($o_t = new Transaction($this->getDb()));
+			$o_t = new Transaction($this->getDb());
+			$this->setTransaction($o_t);
 			$we_set_transaction = true;
 		} else {
 			$o_t = $this->getTransaction();
@@ -509,6 +511,7 @@ class ca_bundle_displays extends BundlableLabelableBaseModelWithAttributes {
 			
 			$t_user = new ca_users($pn_user_id);
 			while($qr_res->nextRow()) {
+				$vb_use_item_values = false;
 				$vs_bundle_name = $vs_bundle_name_proc = $qr_res->get('bundle_name');
 				$va_bundle_name = explode(".", $vs_bundle_name);
 				if (!isset($va_available_bundles[$vs_bundle_name]) && (sizeof($va_bundle_name) > 2)) {
@@ -525,7 +528,7 @@ class ca_bundle_displays extends BundlableLabelableBaseModelWithAttributes {
 				$placements[$placement_id]['allowEditing'] = $vb_user_can_edit;
 							
 				if (!$pb_settings_only) {
-					$t_placement->setSettingDefinitionsForPlacement($va_available_bundles[$vs_bundle_name_proc]['settings']);
+					$t_placement->setSettingDefinitionsForPlacement($va_available_bundles[$vs_bundle_name_proc]['settings'] ?? null);
 					$placements[$placement_id]['display'] = $va_available_bundles[$vs_bundle_name]['display'] ?? null;
 					$placements[$placement_id]['settingsForm'] = $t_placement->getHTMLSettingForm(array('id' => $vs_bundle_name.'_'.$placement_id, 'settings' => $va_settings, 'table' => $vs_subject_table));
 				} else {
@@ -578,7 +581,6 @@ if (!$pb_omit_editing_info) {
 								}
 							}
 
-							$vb_use_item_values = false;
 							switch($t_subject->getFieldInfo($va_bundle_name[1], 'DISPLAY_TYPE')) {
 								case 'DT_SELECT':
 									if ($vs_list_code = $t_subject->getFieldInfo($va_bundle_name[1], 'LIST')) {
@@ -2279,6 +2281,8 @@ if (!$pb_omit_editing_info) {
 						$vs_sort_dir_attr = '';
 						if ($vs_sort = trim(caGetOption('sort', $options, null, ['castTo' => 'string']))) {
 						    $vs_sort_dir = caGetOption('sortDirection', $options, null, ['castTo' => 'string']);
+						    unset($options['sort']);
+						    unset($options['sortDirection']);
 						} else { 
 						    $vs_sort = caGetOption('sort', $va_settings, null, ['castTo' => 'string']); 
 						    $vs_sort_dir = caGetOption('sortDirection', $va_settings, null, ['castTo' => 'string']);
@@ -2299,7 +2303,8 @@ if (!$pb_omit_editing_info) {
 							case 3:
 								// For regular relationships just evaluate the template relative to the relationship record
 								// this way the template can reference interstitial data
-								$vs_val = $po_result->getWithTemplate((caGetOption('showCurrentOnly', $options, true) && !$vs_restrict_to_types  && !$vs_restrict_to_relationship_types) ? $vs_template : $vs_unit_tag.$vs_template."</unit>", $options);
+								$t = (caGetOption('showCurrentOnly', $options, true) && !$vs_restrict_to_types  && !$vs_restrict_to_relationship_types) ? $vs_template : $vs_unit_tag.$vs_template."</unit>";
+								$vs_val = $po_result->getWithTemplate($t, $options);
 								break;
 							case 2:
 								$t_rel = Datamodel::getInstanceByTableName($va_path[1], true);

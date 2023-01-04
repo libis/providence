@@ -621,11 +621,11 @@ class MultipartIDNumber extends IDNumber {
 		$output = [];
 
 		foreach ($elements as $element) {
-			$element_info = $elements_normal_order[$element];
+			$element_info = $elements_normal_order[$element] ?? null;
 			$i = array_search($element, $element_names_normal_order);
 			$padding = 20;
 			
-			$v = $element_values[$i];
+			$v = $element_values[$i] ?? null;
 			if(($i === (sizeof($element_names_normal_order) - 1)) && (sizeof($element_values) > sizeof($element_names_normal_order))) {	// last item with extra elements
 				$extra_elements = array_splice($element_values, $i + 1);
 				$v .= $separator.join($separator, $extra_elements);
@@ -735,9 +735,9 @@ class MultipartIDNumber extends IDNumber {
 		
 		$n = 0;
 		foreach ($elements as $element) {
-			$element_info = $elements_normal_order[$element];
+			$element_info = $elements_normal_order[$element] ?? null;
 			$i = array_search($element, $element_names_normal_order);
-			$v = $element_values[$i];
+			$v = $element_values[$i] ?? null;
 			
 			$range = caGetOption('range', $element_info, 5);
 			$precision = caGetOption('precision', $element_info, 2);
@@ -766,13 +766,13 @@ class MultipartIDNumber extends IDNumber {
 				$ints[] = $this->_numToSortableInt((float)$sv, $range, $precision);
 			} elseif(preg_match('!^([\d]+)([A-Za-z]+)$!', $sv, $m)) {
 				// Treat trailing letters on a numeric values as right-of-decimal (Eg. a sub-identifier)
-				$ints[] = $this->_numToSortableInt($m[0].'.'.$this->_stringToSortableInt($m[1], $range, $precision), $range, $precision);
+				$ints[] = $this->_numToSortableInt((float)($m[0].'.'.$this->_stringToSortableInt($m[1], $range, $precision)), $range, $precision);
 			} elseif(strpos($sv, '.') !== false) {
 				$x = explode('.', $sv);
 				while(sizeof($x) > 0) {
 					$svp = array_shift($x);
 					if(is_numeric($svp)) {
-						$ints[] = $this->_numToSortableInt($svp, $range, $precision);
+						$ints[] = $this->_numToSortableInt((float)$svp, $range, $precision);
 					} else {
 						// Treat as base-36 number
 						$ints[] = $this->_stringToSortableInt($svp, $range, $precision);
@@ -836,7 +836,8 @@ class MultipartIDNumber extends IDNumber {
 		foreach($elements as $element) {
 			$element_info = $elements_normal_order[$element];
 			$i = array_search($element, $elements);
-            if(!is_array($output[$i])) { $output[$i] = []; }
+            if(!is_array($output[$i] ?? null)) { $output[$i] = []; }
+            if(!isset($element_values[$i])) { $element_values[$i] = null; }
 			switch($element_info['type']) {
 				case 'LIST':
 					$output[$i] = array($element_values[$i]);
