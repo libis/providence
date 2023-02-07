@@ -614,7 +614,7 @@ class DataMigrationUtils {
 		// check for titles
 		$prefix_for_name = null;
 		foreach($titles as $title) {
-			if (preg_match("!^({$title}[\.]{0,1})!i", $text, $matches)) {
+			if (preg_match("!^({$title}[\.]{0,1})[\s]+!i", $text, $matches)) {
 				$prefix_for_name = $matches[1];
 				$text = str_replace($matches[1], '', $text);
 			}
@@ -628,7 +628,6 @@ class DataMigrationUtils {
 			$suffix_for_name = $n['suffix'];
 			$is_corporation = $n['is_corporation'];
 		}
-		
 		$name = ['surname' => '', 'forename' => '', 'middlename' => '', 'displayname' => '', 'prefix' => $prefix_for_name, 'suffix' => $suffix_for_name];
 	
 		if ($suffix_for_name && $is_corporation) {
@@ -793,21 +792,21 @@ class DataMigrationUtils {
 		$name = [];
 		
 		foreach($values['ind_suffixes'] as $suffix) {
-			if (preg_match("![,]*[ ]*({$suffix}[\.]{0,1})$!i", $text, $matches)) {
+			if (preg_match("![, ]+[ ]*({$suffix}[\.]{0,1})$!i", $text, $matches)) {
 				$name['suffix'] = $matches[1];
 				$text = str_replace($matches[0], '', $text);
 			}
 		}
 		foreach($values['corp_suffixes'] as $suffix) {
-			if (preg_match("![,]*[ ]*({$suffix}[\.]{0,1})$!i", $text, $matches)) {
+			if (preg_match("![, ]+[ ]*({$suffix}[\.]{0,1})$!i", $text, $matches)) {
 				$name['suffix'] = $matches[1];
 				$text = str_replace($matches[0], '', $text);
 				$name['is_corporation'] = true;
 			}
 		}
 		
-		// Treat parentheticals as suffixes
-		if (preg_match("![,]*[ ]*([\(]+.*[ \)]+)$!i", $text, $matches)) {
+		// Treat parentheticals at end of string as suffixes
+		if (preg_match("![,]*[ ]*([\(]+[^\)]*[ \)]+)$!i", $text, $matches)) {
 			$name['suffix'] = $matches[1];
 			$text = str_replace($matches[0], '', $text);
 		}
@@ -958,7 +957,9 @@ class DataMigrationUtils {
 				$va_labels = $va_nonpreferred_labels;
 			}
 			foreach($va_labels as $va_label) {
-				$pt_instance->addLabel($va_label, $locale_id, null, false);
+				$label_locale = (isset($va_label['locale']) && $va_label['locale']) ? $va_label['locale'] : $locale_id;
+				
+				$pt_instance->addLabel($va_label, $label_locale, null, false);
 
 				if ($pt_instance->numErrors()) {
 					if(isset($options['outputErrors']) && $options['outputErrors']) {
@@ -1254,7 +1255,9 @@ class DataMigrationUtils {
 					$va_tmp = explode('.', $vs_match_on);
 					$vs_element = array_pop($va_tmp);
 					if ($t_instance->hasField($vs_element) || $t_instance->hasElement($vs_element)) {
-						$va_params = array($vs_element => $pa_label[$vs_label_display_fld]);
+						$va_params = [$vs_element => $pa_values[$vs_element] ?? $pa_label[$vs_element] ?? $pa_label[$vs_label_display_fld]];
+						
+						if (!$pb_ignore_parent && $vn_parent_id) { $va_params['parent_id'] = $vn_parent_id; }
 						$vn_id = $vs_table_class::find($va_params, array('returnAs' => 'firstId', 'purifyWithFallback' => true, 'transaction' => $options['transaction'], 'restrictToTypes' => $va_restrict_to_types, 'dontIncludeSubtypesInTypeRestriction' => true));
 						if ($vn_id) { break(2); }
 					}

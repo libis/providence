@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2008-2022 Whirl-i-Gig
+ * Copyright 2008-2023 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -260,6 +260,14 @@ $_ca_attribute_settings['ListAttributeValue'] = array(		// global
 		'label' => _t('Separate disabled values?'),
 		'description' => _t('Group disabled entries after active entries.')
 	),
+	'hideDisabledValues' => array(
+		'formatType' => FT_NUMBER,
+		'displayType' => DT_CHECKBOXES,
+		'default' => 0,
+		'width' => 1, 'height' => 1,
+		'label' => _t('Hide disabled values?'),
+		'description' => _t('Omit disabled entries from list.')
+	),
 );
 
 
@@ -483,10 +491,19 @@ class ListAttributeValue extends AuthorityAttributeValue implements IAttributeVa
 		}
 		
 		if (!$vb_require_value && !$vn_id) {
-			return array(
-				'value_longtext1' => null,
-				'item_id' => null
-			);
+			if(
+				(is_null($ps_value) || !strlen($ps_value ?? '')) 
+				&& 
+				(!in_array(caGetOption('render', $pa_element_info['settings'] ?? [], null), ['horiz_hierbrowser', 'horiz_hierbrowser_with_search', 'vert_hierbrowser', 'vert_hierbrowser_down'], true))) {
+				// value is blank
+				return [
+					'value_longtext1' => null,
+					'item_id' => null
+				];
+			} else {
+				// value was set and is invalid
+				return null;
+			}
 		} elseif ($vb_require_value && !$vn_id && !strlen($ps_value)) {
 			$this->postError(1970, _t('Value for %1 [%2] cannot be blank', $pa_element_info['displayLabel'], $pa_element_info['element_code']), 'ListAttributeValue->parseValue()');
 			return false;
@@ -540,6 +557,7 @@ class ListAttributeValue extends AuthorityAttributeValue implements IAttributeVa
 		
 		$current_selection_display_format = caGetOption('currentSelectionDisplayFormat', $pa_options, caGetOption('currentSelectionDisplayFormat', $pa_element_info['settings'], null));
 		$separate_disabled_values = caGetOption('separateDisabledValues', $pa_options, caGetOption('separateDisabledValues', $pa_element_info['settings'], false));
+		$hide_disabled_values = caGetOption('hideDisabledValues', $pa_options, caGetOption('hideDisabledValues', $pa_element_info['settings'], false));
 		
 		$vn_max_columns = $pa_element_info['settings']['maxColumns'] ?? 1;
 
@@ -562,6 +580,7 @@ class ListAttributeValue extends AuthorityAttributeValue implements IAttributeVa
 					'implicitNullOption' => $vb_implicit_nulls, 'auto_shrink' => $vb_auto_shrink, 
 					'currentSelectionDisplayFormat' => $current_selection_display_format,
 					'separateDisabledValues' => $separate_disabled_values,
+					'hideDisabledValues' => $hide_disabled_values,
 					'deferHierarchyLoad' => (bool)($pa_element_info['settings']['deferHierarchyLoad'] ?? false)
 				]
 			)

@@ -702,6 +702,7 @@ class BaseFindEngine extends BaseObject {
 		$sql = "SELECT htcv.row_id
 				FROM ca_history_tracking_current_values htcv
 				INNER JOIN ca_history_tracking_current_value_labels AS l ON htcv.tracking_id = l.tracking_id
+				INNER JOIN {$hit_table} AS ht ON ht.row_id = htcv.row_id
 				WHERE 
 					htcv.table_num = ? AND (is_future IS NULL OR is_future = 0) AND htcv.policy = ?
 				ORDER BY l.value_sort {$direction}
@@ -855,9 +856,9 @@ class BaseFindEngine extends BaseObject {
 		
 		$sql = "
 			SELECT s.`{$intrinsic}` val
-			FROM {$table}
+			FROM {$table} t
 			{$join_sql}
-			WHERE {$table}.{$table_pk} IN (?)
+			WHERE t.{$table_pk} IN (?)
 			ORDER BY val {$direction}
 		";
 		$qr_sort = $this->db->query($sql, [$hits]);
@@ -1330,7 +1331,7 @@ class BaseFindEngine extends BaseObject {
 	private function _createTempTableForAttributeIDs() {		
 		$table_name = '_caAttrTmp_'.str_replace('-', '',caGenerateGUID());
 		$this->db->query("DROP TABLE IF EXISTS {$table_name}");
-		$this->db->query("CREATE TABLE {$table_name} (attribute_id int unsigned not null primary key, row_id int unsigned not null) engine=memory");
+		$this->db->query("CREATE TEMPORARY TABLE {$table_name} (attribute_id int unsigned not null primary key, row_id int unsigned not null) engine=memory");
 		$this->temporary_tables[$table_name] = true;
 		
 		return $table_name;
