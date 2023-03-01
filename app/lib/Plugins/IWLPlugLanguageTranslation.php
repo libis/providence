@@ -1,13 +1,13 @@
 <?php
 /* ----------------------------------------------------------------------
- * app/controllers/lookup/DisplayTemplateController.php :
+ * app/lib/Plugins/IWLPlugLanguageTranslation.php : interface for language translation plugins
  * ----------------------------------------------------------------------
  * CollectiveAccess
  * Open-source collections management software
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2011-2023 Whirl-i-Gig
+ * Copyright 2023 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -23,27 +23,26 @@
  * the "license.txt" file for details, or visit the CollectiveAccess web site at
  * http://www.CollectiveAccess.org
  *
+ * @package CollectiveAccess
+ * @subpackage Visualization
+ * @license http://www.gnu.org/copyleft/gpl.html GNU Public License version 3
+ *
  * ----------------------------------------------------------------------
  */
-require_once(__CA_LIB_DIR__ . '/Controller/ActionController.php');
 
-class DisplayTemplateController extends ActionController {
+interface IWLPlugLanguageTranslation {
 	# -------------------------------------------------------
-	public function Get() {
-		$ps_template = $this->getRequest()->getParameter('template', pString, 'GET', ['purify' => false, 'urldecode' => false]);
-		$ps_table = $this->getRequest()->getParameter('table', pString);
-		$pn_id = $this->getRequest()->getParameter('id', pString);
-
-		$t_instance = Datamodel::getInstance($ps_table);
-		if(!($t_instance instanceof BundlableLabelableBaseModelWithAttributes)) {
-			return false;
-		}
-
-		if(!($t_instance->load($pn_id))) {
-			return false;
-		}
-		
-		print @$t_instance->getWithTemplate($ps_template);
-	}
+	# Initialization and state
 	# -------------------------------------------------------
+	public function __construct();
+	public function register();
+	
+	public function getDescription();
+	public function checkStatus();
+	
+	public function translate(string $text, string $to_lang, ?array $options=null) : string;
+	public function translateList(array $text, string $to_lang, ?array $options=null) : array;
+	
+	public function getSourceLanguages() : array;
+	public function getTargetLanguages() : array;
 }
