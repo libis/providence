@@ -129,7 +129,6 @@ abstract class BaseRefinery {
 	public function supportsRelationships() {
 		return $this->opb_supports_relationships;
 	}
-
 	# -------------------------------------------------------
 	/**
 	 * Process template expression, replacing "^" prefixed placeholders with data values.
@@ -157,7 +156,7 @@ abstract class BaseRefinery {
 	 *
 	 * @return mixed An array or string
 	 */
-	public static function parsePlaceholder(string $placeholder, array $source_data, array $item, ?int $value_index=null, ?array $options=null) {
+	public static function parsePlaceholder(?string $placeholder, array $source_data, array $item, ?int $value_index=null, ?array $options=null) {
 		$reader = caGetOption('reader', $options, null);
 		$return_as_string = caGetOption("returnAsString", $options, false);
 		$get_at_index = caGetOption('returnDelimitedValueAt', $options, null);
@@ -198,8 +197,8 @@ abstract class BaseRefinery {
 			
 			if (is_array($mval) && $tag[1]) { 
 				if(is_null($value_index)) {
-					foreach($mval as $vn_i => $sval) {
-						$mval[$vn_i] = caProcessTemplateTagDirectives($sval, [$tag[1]]);
+					foreach($mval as $i => $sval) {
+						$mval[$i] = caProcessTemplateTagDirectives($sval, [$tag[1]]);
 					}
 				} elseif(isset($mval[$value_index])) {
 					$mval = [
@@ -217,29 +216,27 @@ abstract class BaseRefinery {
 				// Make sure all tags are in source data array, otherwise try to pull them from the reader.
 				// Some formats, mainly XML, can take expressions (XPath for XML) that are not precalculated in the array
 				$extracted_data = [];
-				foreach($tags as $vs_tag) {
-					$tag = explode('~', $vs_tag);
+				foreach($tags as $tag) {
+					$tag = explode('~', $tag);
 					
 					if (!isset($source_data[$tag[0]])) { 
 						$mval = $reader->get($tag[0], ['returnAsArray' => true]);
-						if(!is_array($mval)) { $mval = [$mval]; }
 					} else {
 						$mval = $source_data[$tag[0]];
-						if(!is_array($mval)) { $mval = [$mval]; }
 					}
+					if(!is_array($mval)) { $mval = [$mval]; }
 					
 					if(!is_null($value_index)) { 
-						$mval = $va_val[$value_index] ?? null;
+						$mval = [$mval[$value_index]] ?? [];
 					}
 					
 					foreach($mval as $i => $v) {
-						$extracted_data[$i][$vs_tag] = $v;
+						$extracted_data[$i][$tag[0]] = $v;
 					}
 				}
-				
 				$mval = [];
 				foreach($extracted_data as $i => $iteration) {
-					$mval[] = caProcessTemplate($placeholder, $va_iteration);
+					$mval[] = caProcessTemplate($placeholder, $iteration);
 				}
 			} else {
 				// Is plain text
@@ -270,11 +267,11 @@ abstract class BaseRefinery {
 
 		// Do processing on members
 		if(is_array($mval)) {
-			foreach($mval as $vn_i => $sval) {
+			foreach($mval as $i => $sval) {
 				if (is_array($item['settings']['original_values']) && (($ix = array_search(mb_strtolower($sval), $item['settings']['original_values'], true)) !== false)) {
 					$sval = $item['settings']['replacement_values'][$ix];
 				}
-				$mval[$vn_i] = trim($sval);
+				$mval[$i] = trim($sval);
 			}
 		}
 		

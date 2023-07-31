@@ -1025,6 +1025,7 @@ class SearchResult extends BaseObject {
 	 *			trim = Trim white space from beginning and end of string. [Default is false]
 	 *			start = Return all values trimmed to start at the specified character. [Default is null]
 	 *			length = Return all values truncated to a maximum length. [Default is null]
+	 *			htmlEncode = Html encode value [Default is false]
 	 *			truncate = Return all values from the beginning truncated to a maximum length; equivalent of passing start=0 and length. [Default is null]
 	 *			ellipsis = Add ellipsis ("...") to truncated values. Values will be set to the truncated length including the ellipsis. Eg. a value truncated to 12 characters will include 9 characters of text and 3 characters of ellipsis. [Default is false]
 	 *			convertLineBreaks = Convert newlines to <br/> tags. [Default is false]
@@ -2438,7 +2439,9 @@ class SearchResult extends BaseObject {
 											$vs_val_proc = $o_value->getUri();
 											break;
 										default:
-											$vs_val_proc = $o_value->getExtraInfo($va_path_components['subfield_name']);
+											$arr = array_slice($va_path_components['components'],2);
+											$dot = implode('.',$arr);
+											$vs_val_proc = $o_value->getExtraInfo($dot);
 											break;
 									}
 									
@@ -2470,7 +2473,9 @@ class SearchResult extends BaseObject {
 											$vs_val_proc = $o_value->getDisplayValue(array_merge($pa_options, array('output' => $pa_options['output'])));
 											break;
 										default:
-											$vs_val_proc = $o_value->getExtraInfo($vs_final_path_key);
+											$arr = array_slice($va_path_components['components'],3);
+											$dot = implode('.',$arr);
+											$vs_val_proc = $o_value->getExtraInfo($dot);
 											break;
 									}
 
@@ -2881,6 +2886,7 @@ class SearchResult extends BaseObject {
 	 *		trim = Trim white space from beginning and end of string. [Default is false]
 	 *		start = Return all values trimmed to start at the specified character. [Default is null]
 	 *		length = Return all values truncated to a maximum length. [Default is null]
+	 *		htmlEncode = Html encode value [Default is false]
 	 *		truncate = Return all values from the beginning truncated to a maximum length; equivalent of passing start=0 and length. [Default is null]
 	 *		ellipsis = Add ellipsis ("...") to truncated values. Values will be set to the truncated length including the ellipsis. Eg. a value truncated to 12 characters will include 9 characters of text and 3 characters of ellipsis. [Default is false]
 	 *		sort = Sort returned values. [Default is false]
@@ -2919,6 +2925,9 @@ class SearchResult extends BaseObject {
 						}
 						if($pa_options['striptags'] || $pa_options['striptags']) {
 							$vs_val = strip_tags($vs_val);
+						}
+						if($pa_options['htmlEncode']) {
+							$vs_val = htmlentities($vs_val);
 						}
 						if ($pa_options['truncate'] && ($pa_options['truncate'] > 0)) { 
 							$pa_options['start'] = 0;
@@ -2974,7 +2983,12 @@ class SearchResult extends BaseObject {
 					if(($pa_options['striptags'] ?? false) || ($pa_options['striptags'] ?? false)) {
 						$vs_val = strip_tags($vs_val);
 					}
-					if (($pa_options['truncate'] ?? null) && ($pa_options['truncate'] > 0)) { 
+
+					if($pa_options['htmlEncode'] ?? false) {
+						$vs_val = htmlentities($vs_val);
+					}
+					
+					if (isset($pa_options['truncate']) && ($pa_options['truncate'] > 0)) { 
 						$pa_options['start'] = 0;
 						$pa_options['length'] = (int)$pa_options['truncate'];
 					}

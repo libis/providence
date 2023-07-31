@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2009-2017 Whirl-i-Gig
+ * Copyright 2009-2023 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -25,13 +25,12 @@
  *
  * ----------------------------------------------------------------------
  */
-	$t_element 				= $this->getVar('t_element');
-	$vn_element_id 			= $this->getVar('element_id');
-	$va_sub_elements 		= $this->getVar('sub_elements');
-	$va_type_restrictions 	= $this->getVar('type_restrictions');
-	
-	$vn_parent_id 			= $this->getVar('parent_id');
-	$o_request 				= $this->request;
+$t_element 				= $this->getVar('t_element');
+$vn_element_id 			= $this->getVar('element_id');
+$va_sub_elements 		= $this->getVar('sub_elements');
+$va_type_restrictions 	= $this->getVar('type_restrictions');
+
+$vn_parent_id 			= $this->getVar('parent_id');
 ?>
 <div class="sectionBox">
 <?php
@@ -222,9 +221,7 @@ if(is_array($va_sub_elements)):
 endif;
 ?>
 	<div class="editorBottomPadding"><!-- empty --></div>
-<?php	
-			print $vs_control_box;
-?>
+<?= $vs_control_box; ?>
 </div>
 
 <div class="editorBottomPadding"><!-- empty --></div>
