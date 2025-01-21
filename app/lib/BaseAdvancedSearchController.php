@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2010-2023 Whirl-i-Gig
+ * Copyright 2010-2024 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -160,22 +160,27 @@ class BaseAdvancedSearchController extends BaseRefineableSearchController {
 			}
 
 			if ($this->opn_type_restriction_id > 0) {
-				$po_search->setTypeRestrictions(array($this->opn_type_restriction_id));
+				$po_search->setTypeRestrictions([$this->opn_type_restriction_id]);
 			}
 
 			$vb_criteria_have_changed = false;
 			if (is_subclass_of($po_search, "BrowseEngine")) {
 				$vb_criteria_have_changed = $po_search->criteriaHaveChanged();
 				$po_search->execute($va_search_opts);
-				$this->opo_result_context->setParameter('browse_id', $po_search->getBrowseID());
 				$vo_result = $po_search->getResults($va_search_opts);
+				
+				if((!$vo_result || !$vo_result->numHits()) && $po_search->numCriteria() > 1) {
+					$po_search->removeAllCriteria();
+					$po_search->addCriteria('_search', $vs_search);
+					$po_search->execute($va_search_opts);
+					$vo_result = $po_search->getResults($va_search_opts);
+				}
+				
+				$this->opo_result_context->setParameter('browse_id', $po_search->getBrowseID());
 			} else {
 				$vo_result = $po_search->search($vs_search, $va_search_opts);
 			}
 			
-			$result_desc = ($this->request->user->getPreference('show_search_result_desc') === 'show') ? $po_search->getSearchResultDesc() : [];
-			$this->view->setVar('result_desc', $result_desc);
-			$this->opo_result_context->setResultDescription($result_desc);
 			
 			$this->opo_result_context->validateCache();
 
@@ -188,19 +193,28 @@ class BaseAdvancedSearchController extends BaseRefineableSearchController {
 			if($vb_is_new_search || $vb_criteria_have_changed || $vb_sort_has_changed || $this->type_restriction_has_changed) {
 				$this->opo_result_context->setResultList($vo_result->getPrimaryKeyValues());
 
-				if ($this->opo_result_context->searchExpressionHasChanged()) { $vn_page_num = 1; }
+				$vn_page_num = 1; 
+				$this->opo_result_context->setCurrentResultsPageNumber(1);
 			}
 
-			$vo_result->seek(($vn_page_num - 1) * $vn_items_per_page);
 
 			$this->view->setVar('num_hits', $vo_result->numHits());
 			$this->view->setVar('num_pages', $vn_num_pages = ceil($vo_result->numHits()/$vn_items_per_page));
  			$this->view->setVar('start', ($vn_page_num - 1) * $vn_items_per_page);
 			if ($vn_page_num > $vn_num_pages) { $vn_page_num = 1; }
 
+			$vo_result->seek($start = ($vn_page_num - 1) * $vn_items_per_page);
 			$this->view->setVar('page', $vn_page_num);
 			$this->view->setVar('search', $vs_search);
 			$this->view->setVar('result', $vo_result);
+			
+			$result_desc = [];
+			if($this->request->user->getPreference('show_search_result_desc') === 'show') {
+				$page_hits = caGetHitsForPage($vo_result, $start, $vn_items_per_page);
+				$result_desc = $po_search->getResultDesc($page_hits);
+			}
+			$this->view->setVar('result_desc', $result_desc);
+			$this->opo_result_context->setResultDesc($result_desc);
 		}
 
 		//
@@ -237,11 +251,11 @@ class BaseAdvancedSearchController extends BaseRefineableSearchController {
 		switch($pa_options['output_format'] ?? null) {
 			# ------------------------------------
 			case 'LABELS':
-				caExportAsLabels($this->request, $vo_result, $this->request->getParameter("label_form", pString), $vs_search, $vs_search, ['output' => 'STREAM', 'checkAccess' => $va_access_values]);
+				caExportAsLabels($this->request, $vo_result, $this->request->getParameter("label_form", pString), $vs_search, $vs_search, ['output' => 'STREAM', 'checkAccess' => $va_access_values, 'display' => $t_display]);
 				break;
 			# ------------------------------------
 			case 'EXPORT':
-				caExportResult($this->request, $vo_result, $this->request->getParameter("export_format", pString), $vs_search, ['output' => 'STREAM']);
+				caExportResult($this->request, $vo_result, $this->request->getParameter("export_format", pString), $vs_search, ['output' => 'STREAM', 'display' => $t_display, 'browseCriteria' => $this->opo_browse->getCriteriaAsStrings(null, ['sense' => 'singular', 'returnAs' => 'array'])]);
 				break;
 			# ------------------------------------
 			case 'HTML':

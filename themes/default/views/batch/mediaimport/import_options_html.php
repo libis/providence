@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2012-2022 Whirl-i-Gig
+ * Copyright 2012-2025 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -25,22 +25,20 @@
  *
  * ----------------------------------------------------------------------
  */
+AssetLoadManager::register("fileupload");
 
-	AssetLoadManager::register("fileupload");
+$t_instance = $this->getVar('t_instance');
+$o_config = $t_instance->getAppConfig();
+$t_rep = $this->getVar('t_rep');
 
- 	$t_instance = $this->getVar('t_instance');
- 	$o_config = $t_instance->getAppConfig();
- 	$t_rep = $this->getVar('t_rep');
+$va_last_settings = $this->getVar('batch_mediaimport_last_settings');
 
- 	$va_last_settings = $this->getVar('batch_mediaimport_last_settings');
-
-	print $vs_control_box = caFormControlBox(
-		caFormJSButton($this->request, __CA_NAV_ICON_SAVE__, _t("Execute media import"), 'caBatchMediaImportFormButton', array('onclick' => 'caShowConfirmBatchExecutionPanel(); return false;')).' '.
-		caFormNavButton($this->request, __CA_NAV_ICON_CANCEL__, _t("Cancel"), '', 'batch', 'MediaImport', 'Index/'.$this->request->getActionExtra(), array()),
-		'',
-		''
-	);
-
+print $vs_control_box = caFormControlBox(
+	caFormJSButton($this->request, __CA_NAV_ICON_SAVE__, _t("Execute media import"), 'caBatchMediaImportFormButton', array('onclick' => 'caShowConfirmBatchExecutionPanel(); return false;')).' '.
+	caFormNavButton($this->request, __CA_NAV_ICON_CANCEL__, _t("Cancel"), '', 'batch', 'MediaImport', 'Index/'.$this->request->getActionExtra(), array()),
+	'',
+	''
+);
 ?>
 	<div id="batchProcessingTableProgressGroup" style="display: none;">
 		<div class="batchProcessingStatus"><span id="batchProcessingTableStatus" > </span></div>
@@ -86,7 +84,8 @@
 			fileIcon: "<?= caNavIcon(__CA_NAV_ICON_FILE__, 1); ?>",
 
 			displayFiles: true,
-			allowFileSelection: false,
+			allowFileSelection: true,
+			allowMultipleSelection: true,
 
 			uploadProgressMessage: <?= json_encode(_t("Upload progress: %1")); ?>,
 			uploadProgressID: "batchProcessingTableProgressGroup",
@@ -101,7 +100,18 @@
 			currentSelectionDisplayID: 'browseCurrentSelection',
 
 			onSelection: function(item_id, path, name, type) {
-				if (type == 'DIR') { jQuery('#caDirectoryValue').val(path); } else { jQuery('#caDirectoryValue').val(''); }
+				if(name.length > 0) {
+					let l = name.map(x => path + '/' + x);
+					jQuery('#caDirectoryValue').val(l.join(';'))
+				} else {
+					jQuery('#caDirectoryValue').val(path);
+				}
+				
+				if(jQuery('#caDirectoryValue').val().length > 0) {
+					jQuery('#caDeleteSelectedMediaContainer').show(0);
+				} else {
+					jQuery('#caDeleteSelectedMediaContainer').hide(0);
+				}
 			}
 		});
 
@@ -109,7 +119,7 @@
 	});
 </script>
 <?php
-		print caHTMLHiddenInput('directory', array('value' => '', 'id' => 'caDirectoryValue'));
+		print caHTMLHiddenInput('directory', ['value' => '', 'id' => 'caDirectoryValue']);
 ?>
 				</div>
 				<div style="margin: 8px 0px 0px 0px; padding-bottom:5px;">
@@ -120,7 +130,12 @@
 				}
 				print caHTMLCheckboxInput('include_subdirectories', $va_opts).' '._t('Include all sub-directories');
 				$va_opts['style'] = 'margin-left: 10px';
-				print caHTMLCheckboxInput('delete_media_on_import', $va_opts).' '._t('Delete media after import');
+				
+				if($this->getVar('user_can_delete_media_on_import')) {
+					print caHTMLCheckboxInput('delete_media_on_import', $va_opts).' '._t('Delete media after import');
+					
+					print '<div id="caDeleteSelectedMediaContainer" style="float: right; display: none">'.caJSButton($this->request, __CA_NAV_ICON_TRASH__, _t('Delete files'), 'caDeleteSelectedMedia', [], ['size' => '16px']).'</div>';
+				}
 ?>
 				</div>
 			</div>
@@ -250,8 +265,11 @@
 									if (isset($va_last_settings['idnoMode']) && ($va_last_settings['idnoMode'] == 'form')) { $va_attrs['checked'] = 1; }
 									print caHTMLRadioButtonInput('idno_mode', $va_attrs);
 								?></td>
-								<td class='formLabel' id='caIdnoFormModeForm'><?= _t('Set %1 identifier to %2', caGetTableDisplayName($t_instance->tableName(), false),  $t_instance->htmlFormElement('idno', '^ELEMENT', array('request' => $this->request))); ?></td>
+								<td class='formLabel' id='caIdnoFormModeForm'><?= _t('Set %1 identifier to ', caGetTableDisplayName($t_instance->tableName(), false)).$t_instance->htmlFormElement('idno', '^ELEMENT', ['request' => $this->request]); ?></td>
 							</tr>
+<?php
+	if(!$this->getVar('target_idno_is_serial')) {
+?>
 							<tr>
 								<td><?php
 									$va_attrs = array('value' => 'filename', 'id' => 'caIdnoFilenameMode');
@@ -270,12 +288,23 @@
 							</tr>
 							<tr>
 								<td><?php
+									$va_attrs = array('value' => 'directory', 'id' => 'caIdnoDirectoryMode');
+									if (isset($va_last_settings['idnoMode']) && ($va_last_settings['idnoMode'] == 'directory')) { $va_attrs['checked'] = 1; }
+									print caHTMLRadioButtonInput('idno_mode', $va_attrs);
+								?></td>
+								<td class='formLabel'><?= _t('Set %1 identifier to directory name', caGetTableDisplayName($t_instance->tableName(), false)); ?></td>
+							</tr>
+							<tr>
+								<td><?php
 									$va_attrs = array('value' => 'directory_and_filename', 'id' => 'caIdnoDirectoryAndFilenameMode');
 									if (isset($va_last_settings['idnoMode']) && ($va_last_settings['idnoMode'] == 'directory_and_filename')) { $va_attrs['checked'] = 1; }
 									print caHTMLRadioButtonInput('idno_mode', $va_attrs);
 								?></td>
 								<td class='formLabel'><?= _t('Set %1 identifier to directory and file name', caGetTableDisplayName($t_instance->tableName(), false)); ?></td>
 							</tr>
+<?php
+	}
+?>
 						</table>
 						<script type="text/javascript">
 							jQuery(document).ready(function() {
@@ -475,8 +504,11 @@
 										if (isset($va_last_settings['representationIdnoMode']) && ($va_last_settings['representationIdnoMode'] == 'form')) { $va_attrs['checked'] = 1; }
 										print caHTMLRadioButtonInput('representation_idno_mode', $va_attrs);
 										?></td>
-									<td class='formLabel' id='caRepresentationIdnoFormModeForm'><?= _t('Set %1 identifier to %2', caGetTableDisplayName('ca_object_representations', false) , $t_rep->htmlFormElement('idno', '^ELEMENT', array('request' => $this->request))); ?></td>
+									<td class='formLabel' id='caRepresentationIdnoFormModeForm'><?= _t('Set %1 identifier to ', caGetTableDisplayName('ca_object_representations', false)).$t_rep->htmlFormElement('idno', '^ELEMENT', ['request' => $this->request]); ?></td>
 								</tr>
+<?php
+	if(!$this->getVar('representation_idno_is_serial')) {
+?>
 								<tr>
 									<td><?php
 										$va_attrs = array('value' => 'filename', 'id' => 'caRepresentationIdnoFilenameMode');
@@ -501,6 +533,9 @@
 										?></td>
 									<td class='formLabel'><?= _t('Set %1 identifier to directory and file name', caGetTableDisplayName('ca_object_representations', false)); ?></td>
 								</tr>
+<?php
+	}
+?>
 							</table>
 							<script type="text/javascript">
 								jQuery(document).ready(function() {
@@ -661,6 +696,26 @@
 				caUpdateFormForMode(jQuery('#importMode').val());
 			});
 			caUpdateFormForMode(jQuery('#importMode').val());
+			
+			jQuery('#caDeleteSelectedMedia').on('click', function(e) {
+				jQuery.post(
+					'<?= caNavUrl($this->request, '*', '*', 'DeleteFiles'); ?>', 
+					{ 
+						directory: jQuery('#caDirectoryValue').val(),
+						csrfToken: <?= json_encode(caGenerateCSRFToken($this->request)); ?>
+					}, 
+					function(res) {
+						if (res['error']) { 
+							jQuery.jGrowl(res['error'], { header: '' });
+						} else { 
+							jQuery.jGrowl(res['msg'], { header: '' }); 
+							
+							oDirBrowser.reload();
+						};
+					},
+					'json'
+				);
+			});
 		});
 		
 	</script>

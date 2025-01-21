@@ -178,6 +178,11 @@ var caUI = caUI || {};
 			if (!id) { id = 'new_' + (that.getCount() - 1); } // default to current "new" option
 			var item_id = data.id;
 			var type_id = (data.type_id) ? data.type_id : '';
+			
+			// transform with type map when available
+			if(options.relationshipTypes && options.relationshipTypes['_type_map'] && options.relationshipTypes['_type_map'][type_id]) {
+				type_id = options.relationshipTypes['_type_map'][type_id];
+			}
 			if (parseInt(item_id) < 0) { return; }
 			
 			jQuery('#' + options.itemID + id + ' #' + options.fieldNamePrefix + 'id' + id).val(item_id);
@@ -289,7 +294,7 @@ var caUI = caUI || {};
 		options.sort = function(key, label) {
 			if (caBundleUpdateManager) {			
 				var sortDirection = jQuery('#' + that.fieldNamePrefix + 'RelationBundleSortDirectionControl').val();
-				caBundleUpdateManager.reloadBundleByPlacementID(that.placementID, {'sort': key, 'sortDirection': sortDirection});
+				caBundleUpdateManager.reloadBundleByPlacementID(that.placementID, {'sort': key, 'sortDirection': sortDirection, 'formName': that.formName});
 				that.loadedSort = key;
 				that.loadedSortDirection = sortDirection;
 			}
@@ -344,7 +349,6 @@ var caUI = caUI || {};
 				return; 
 			}
 			if(that.relationshipTypes && that.relationshipTypes.length && that.relationshipTypes[0] && !that.relationshipTypes.includes(v['relationship_type_id'])) { 
-				console.log(v, that.relationshipTypes);
 				return; 
 			}
 			
@@ -389,7 +393,7 @@ var caUI = caUI || {};
 				that.addToBundle(id);
 			}
 		};
-	
+		if(that._updateSortOrderListIDFormElement) { that._updateSortOrderListIDFormElement(); }
 		return that;
 	};	
 })(jQuery);

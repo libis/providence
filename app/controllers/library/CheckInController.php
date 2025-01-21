@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2014-2022 Whirl-i-Gig
+ * Copyright 2014-2024 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -25,7 +25,6 @@
  *
  * ----------------------------------------------------------------------
  */
-
 require_once(__CA_APP_DIR__.'/helpers/libraryServicesHelpers.php');
 
 class CheckInController extends ActionController {
@@ -78,6 +77,8 @@ class CheckInController extends ActionController {
 		$va_info['title'] = $va_info['name'].' ('.$va_info['idno'].')';
 		$va_info['borrower'] = _t('Borrowed by %1 on %2', $va_info['user_name'], $va_info['checkout_date']);
 		$this->view->setVar('data', $va_info);
+		
+		$this->response->setContentType('application/json');
 		$this->render('checkin/ajax_data_json.php');
 	}
 	# -------------------------------------------------------
@@ -96,7 +97,6 @@ class CheckInController extends ActionController {
 			$app_name = Configuration::load()->get('app_display_name');
 			$sender_email = $library_config->get('notification_sender_email');
 			$sender_name = $library_config->get('notification_sender_name');
-			$subject = _t('Receipt for check in');
 			
 			$checked_in_items = [];
 		
@@ -129,7 +129,10 @@ class CheckInController extends ActionController {
 				}
 			}
 			if($library_config->get('send_item_checkin_receipts') && (sizeof($checked_in_items) > 0) && ($user_email = $this->request->user->get('ca_users.email'))) {
-				if (!caSendMessageUsingView(null, $user_email, $sender_email, "[{$app_name}] {$subject}", "library_checkin_receipt.tpl", ['subject' => $subject, 'from_user_id' => $user_id, 'sender_name' => $sender_name, 'sender_email' => $sender_email, 'sent_on' => time(), 'checkin_date' => caGetLocalizedDate(), 'checkins' => $checked_in_items], null, [], ['source' => 'Library checkin receipt'])) {
+				if(!($subject = $library_config->get('item_checkin_receipt_subject_template'))) {
+					$subject = _t('[%1] Receipt for check in', $app_name);
+				}
+				if (!caSendMessageUsingView(null, $user_email, $sender_email, "{$subject}", "library_checkin_receipt.tpl", ['subject' => $subject, 'from_user_id' => $user_id, 'sender_name' => $sender_name, 'sender_email' => $sender_email, 'sent_on' => time(), 'checkin_date' => caGetLocalizedDate(), 'checkins' => $checked_in_items], null, [], ['source' => 'Library checkin receipt'])) {
 					global $g_last_email_error;
 					$va_ret['errors'][] = _t('Could send receipt: %1', $g_last_email_error);
 				}
@@ -137,6 +140,8 @@ class CheckInController extends ActionController {
 		}
 		
 		$this->view->setVar('data', $va_ret);
+		
+		$this->response->setContentType('application/json');
 		$this->render('checkin/ajax_data_json.php');
 	}
 	# -------------------------------------------------------

@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2021-2023 Whirl-i-Gig
+ * Copyright 2021-2024 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -47,7 +47,7 @@ function filterAccessValues(?array $values) : ?array {
  * Extract list of bundles to return from request args.
  *
  */
-function extractBundleNames(\BaseModel $rec, array $args) : array {
+function extractBundleNames($rec, array $args) : array {
 	$table = $args['table'];
 	$bundles = $args['bundles'];
 	if(!isset($bundles) || !is_array($bundles) || !sizeof($bundles)) {
@@ -75,6 +75,7 @@ function extractBundleNames(\BaseModel $rec, array $args) : array {
  *		start = 
  *		limit = 
  *		filterByAncestors = 
+ *		filterNonPrimaryRepresentations = 
  *
  * @return array
  */
@@ -85,6 +86,9 @@ function fetchDataForBundles($sresult, array $bundles, array $options=null) : ar
 	$ancestor_filters = caGetOption('filterByAncestors', $options, null);
 	
 	$check_access = caGetOption('checkAccess', $options, null);
+	
+	$config = \Configuration::load();
+	$base_url = $config->get('site_host').$config->get('ca_url_root');
 		
 	$data = [];
 	if(isset($bundles) && is_array($bundles) && sizeof($bundles)) {
@@ -105,6 +109,8 @@ function fetchDataForBundles($sresult, array $bundles, array $options=null) : ar
 			// out of bounds; return empty set
 			return [];
 		}
+		
+		$sresult->filterNonPrimaryRepresentations(caGetOption('filterNonPrimaryRepresentations', $options, false));
 		while($sresult->nextHit()) {
 			// ladder up hierarchy looking for matches
 			if(is_array($ancestor_filters) && (sizeof($ancestor_filters) > 0)) {
@@ -133,8 +139,8 @@ function fetchDataForBundles($sresult, array $bundles, array $options=null) : ar
 			$row = [];
 			foreach($bundles as $f) {
 				$pt = caParseTagOptions($f);
-				$f = $pt['tag'];
-				
+				$f = $pt['tag'] ?? null;
+				$use_code = $pt['options']['useCode'] ?? null;
 				$is_template = (strpos($f, '^') !== false);	 // is display template if it has at least one caret
 				
 				$p = \SearchResult::parseFieldPathComponents($table, $f);
@@ -148,12 +154,12 @@ function fetchDataForBundles($sresult, array $bundles, array $options=null) : ar
 				if($is_template) {
 					$row[] = [
 							'name' => $f, 
-							'code' => $f,
+							'code' => $use_code ? $use_code : $f,
 							'locale' => null,
 							'dataType' => "Text",
 							'values' => [
 								[
-									'value' => $sresult->getWithTemplate($f, ['checkAccess' => $check_access, 'primaryIDs' => caGetOption('primaryIDs', $options, null)]),
+									'value' => $sresult->getWithTemplate($f, array_merge($pt['options'] ?? [], ['checkAccess' => $check_access, 'primaryIDs' => caGetOption('primaryIDs', $options, null)])),
 									'locale' => null,
 									'subvalues' => null,
 									'id' => null,
@@ -166,7 +172,7 @@ function fetchDataForBundles($sresult, array $bundles, array $options=null) : ar
 					if(strlen($v = $sresult->get($f, array_merge(['convertCodesToIdno' => true, 'checkAccess' => $check_access], $pt['options'])))) {
 						$row[] = [
 							'name' => $rec->getDisplayLabel($f), 
-							'code' => $f,
+							'code' => $use_code ? $use_code : $f,
 							'locale' => null,
 							'dataType' => $table::intrinsicTypeToString((int)$sresult->getFieldInfo($p['field_name'], 'FIELD_TYPE')),
 							'values' => [
@@ -220,13 +226,12 @@ function fetchDataForBundles($sresult, array $bundles, array $options=null) : ar
 					if(sizeof($values) > 0) {
 						$row[] = [
 							'name' => $rec->getDisplayLabel($f), 
-							'code' => $f,
+							'code' => $use_code ? $use_code : $f,
 							'dataType' => $p['subfield_name'] ? $table::intrinsicTypeToString((int)$label->getFieldInfo($p['subfield_name'], 'FIELD_TYPE')) : 'Container',
 							'values' => $values
 						];
 					}
 				} elseif($rel = \Datamodel::getInstance($f, true)) {	// straight table name
-					
 					// relationships
 					$map = [
 						'row_id' => ['name' => $rel->primaryKey(), 'datatype' => 'Numeric'],
@@ -267,13 +272,12 @@ function fetchDataForBundles($sresult, array $bundles, array $options=null) : ar
 						// Relationship list level
 						$row[] = [
 							'name' => $rec->getDisplayLabel($f), 
-							'code' => $f,
+							'code' => $use_code ? $use_code : $f,
 							'dataType' => "Container",
 							'values' => $values,
 							'id' => $id
 						];
 					}
-				
 				} else {
 					// Metadata elements
 					foreach($d as $index => $by_locale) {
@@ -315,7 +319,7 @@ function fetchDataForBundles($sresult, array $bundles, array $options=null) : ar
 								if($is_set) {
 									// Attribute level
 									$values[] = [
-										'id' => $id,	// attribute_id
+										'id' => is_numeric($id) ? $id : $c,	// attribute_id
 										'value_id' => $sub_field_values[$sf.'_value_id'],
 										'locale' => $locale,
 										'value' => $v,
@@ -329,7 +333,7 @@ function fetchDataForBundles($sresult, array $bundles, array $options=null) : ar
 						// Metadata element level
 						$row[] = [
 							'name' => $rec->getDisplayLabel("{$p['table_name']}.{$p['field_name']}.{$p['subfield_name']}"), 
-							'code' => $f,
+							'code' => $use_code ? $use_code : $f,
 							'dataType' => \ca_metadata_elements::getElementDatatype("{$p['field_name']}", ['returnAsString' => true]),
 							'values' => $values,
 							'id' => $id
@@ -343,7 +347,8 @@ function fetchDataForBundles($sresult, array $bundles, array $options=null) : ar
 					'id' => $sresult->getPrimaryKey(),
 					'table' => $table,
 					'idno' => $sresult->get(\Datamodel::getTableProperty($table, 'ID_NUMBERING_ID_FIELD')),
-					'bundles' => $row
+					'bundles' => $row,
+					'manifestUrl' => $base_url.'/service/IIIF/manifest/'.$table.':'.$sresult->getPrimaryKey()
 				];
 			}
 			$data[] = $row;
@@ -528,9 +533,9 @@ function itemSchemaDefinitions() {
 					'type' => Type::string(),
 					'description' => 'Media MIME type'
 				],
-				'mimetype' => [
+				'mediaclass' => [
 					'type' => Type::string(),
-					'description' => 'Media MIME type'
+					'description' => 'Media class'
 				],
 				'width' => [
 					'type' => Type::int(),
@@ -541,13 +546,17 @@ function itemSchemaDefinitions() {
 					'description' => 'Media height (in pixels)'
 				],
 				'duration' => [
-					'type' => Type::int(),
+					'type' => Type::float(),
 					'description' => 'Media duration (in seconds)'
 				],
 				'filesize' => [
-					'type' => Type::int(),
+					'type' => Type::string(),
 					'description' => 'Media filesize (in bytes)'
-				]
+				],
+				'md5' => [
+					'type' => Type::string(),
+					'description' => 'MD5 checksum'
+				],
 			]
 		]),
 		$mediaItemType = new ObjectType([
@@ -578,6 +587,14 @@ function itemSchemaDefinitions() {
 					'type' => Type::string(),
 					'description' => 'Media MIME type'
 				],
+				'mediaclass' => [
+					'type' => Type::string(),
+					'description' => 'Media class'
+				],
+				'md5' => [
+					'type' => Type::string(),
+					'description' => 'MD5 checksum'
+				],
 				'originalFilename' => [
 					'type' => Type::string(),
 					'description' => 'Original filename of media'
@@ -591,16 +608,32 @@ function itemSchemaDefinitions() {
 					'description' => 'Media height (in pixels)'
 				],
 				'duration' => [
-					'type' => Type::int(),
+					'type' => Type::float(),
 					'description' => 'Media duration (in seconds)'
 				],
 				'filesize' => [
-					'type' => Type::int(),
+					'type' => Type::string(),
 					'description' => 'Media filesize (in bytes)'
 				],
 				'isPrimary' => [
 					'type' => Type::boolean(),
 					'description' => 'Is primary media?'
+				],
+				'relationship_type_id' => [
+					'type' => Type::string(),
+					'description' => 'Relationship type_id'
+				],
+				'relationship_typename' => [
+					'type' => Type::string(),
+					'description' => 'Relationship type name'
+				],
+				'relationship_typecode' => [
+					'type' => Type::string(),
+					'description' => 'Relationship type code'
+				],
+				'bundles' => [
+					'type' => Type::listOf($bundleValueListType),
+					'description' => 'Data for media'
 				],
 			]
 		]),
@@ -628,6 +661,10 @@ function itemSchemaDefinitions() {
 					'type' => Type::listOf($mediaItemType),
 					'description' => 'Media for related item'
 				],
+				'manifestUrl' => [
+					'type' => Type::string(),
+					'description' => 'Media for related item'
+				],
 				'relationship_type_id' => [
 					'type' => Type::string(),
 					'description' => 'Relationship type_id'
@@ -642,24 +679,28 @@ function itemSchemaDefinitions() {
 				],
 			]
 		]),
-		// $targetList = new ObjectType([
-// 			'name' => 'TargetList',
-// 			'description' => 'A list of related items',
-// 			'fields' => [
-// 				'name' => [
-// 					'type' => Type::string(),
-// 					'description' => 'Name of target'
-// 				],
-// 				'table' => [
-// 					'type' => Type::string(),
-// 					'description' => 'Related table'
-// 				],
-// 				'relationships' => [
-// 					'type' => Type::listOf($itemType),
-// 					'description' => 'List of related records'
-// 				]
-// 			]
-// 		]),
+		$mediaListType = new ObjectType([
+			'name' => 'MediaList',
+			'description' => 'Media associated with record',
+			'fields' => [
+				'id' => [
+					'type' => Type::int(),
+					'description' => 'ID of media'
+				],
+				'table' => [
+					'type' => Type::string(),
+					'description' => 'Table of item'
+				],
+				'idno' => [
+					'type' => Type::string(),
+					'description' => 'Item identifier'
+				],
+				'media' => [
+					'type' => Type::listOf($mediaItemType),
+					'description' => 'Media for related item'
+				],
+			]
+		]),
 		$targetList = _targetListType(0, $bundleValueListType, $mediaItemType),
 		$relationshipList = new ObjectType([
 			'name' => 'RelationshipList',
@@ -801,6 +842,10 @@ function _targetListInputType(int $level=0) : InputObjectType {
 			'type' => Type::listOf(Type::string()),
 			'description' => 'If including representations, which versions to return'
 		],
+		'mediaBundles' => [
+			'type' => Type::listOf(Type::string()),
+			'description' => _t('Media bundles to return.')
+		],
 		'restrictMediaToTypes' => [
 			'type' => Type::listOf(Type::string()),
 			'description' => 'If including representations, which restrict to specified types'
@@ -829,6 +874,7 @@ function resolveParams(array $args, ?string $prefix=null) : array {
 	$idno_key = $prefix ? $prefix.'Idno' : 'idno';
 	$identifier_key = $prefix ? $prefix.'Identifier' : 'identifier';
 	
+	$identifier = null;
 	if(isset($args[$id_key]) && ($args[$id_key] > 0)) {
 		$identifier = $args[$id_key];
 		$opts['primaryKeyOnly'] = true;
@@ -839,4 +885,27 @@ function resolveParams(array $args, ?string $prefix=null) : array {
 		$identifier = $args[$identifier_key] ?? null;
 	}
 	return [$identifier, $opts];
+}
+
+/**
+ *
+ */
+function resolveListParams(array $args, ?string $prefix=null) : array {
+	$opts = [];
+	
+	$id_key = $prefix ? $prefix.'Ids' : 'ids';
+	$idno_key = $prefix ? $prefix.'Idnos' : 'idnos';
+	$identifier_key = $prefix ? $prefix.'Identifiers' : 'identifiers';
+	
+	$identifiers = null;
+	if(isset($args[$id_key]) && is_array($args[$id_key])) {
+		$identifiers = $args[$id_key];
+		$opts['primaryKeyOnly'] = true;
+	} elseif(isset($args[$idno_key]) && is_array($args[$idno_key])) {
+		$identifiers = $args[$idno_key];
+		$opts['idnoOnly'] = true;
+	} elseif(isset($args[$identifier_key]) && is_array($args[$identifier_key])) {
+		$identifiers = $args[$identifier_key] ?? null;
+	}
+	return [$identifiers, $opts];
 }

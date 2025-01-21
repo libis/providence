@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2014-2023 Whirl-i-Gig
+ * Copyright 2014-2024 Whirl-i-Gig
  * This file originally contributed 2014 by Gaia Resources
  *
  * For more information visit http://www.CollectiveAccess.org
@@ -26,7 +26,6 @@
  *
  * ----------------------------------------------------------------------
  */
-
 require_once(__CA_APP_DIR__."/plugins/prepopulate/lib/applyPrepopulateRulesTool.php");
 
 class prepopulatePlugin extends BaseApplicationPlugin {
@@ -151,7 +150,7 @@ class prepopulatePlugin extends BaseApplicationPlugin {
 		$va_rules = $this->opo_plugin_config->get('prepopulate_rules');
 		if (!$va_rules || (!is_array($va_rules)) || (sizeof($va_rules)<1)) { return false; }
 
-        if (is_array($pa_options['restrictToRules'] ?? null)) {
+        if (isset($pa_options['restrictToRules'])) {
             $restrictToRules = explode(",", $pa_options['restrictToRules']);
             // Intersect between all rules and restricted rules. It will ignore the ones that doesn't exists
             $va_rules_filtered = [];
@@ -160,7 +159,7 @@ class prepopulatePlugin extends BaseApplicationPlugin {
                     $va_rules_filtered[] = $va_rules[$res_rules];
             }
             $va_rules=$va_rules_filtered;
-        } elseif(is_array($pa_options['excludeRules'] ?? null)) {
+        } elseif(isset($pa_options['excludeRules'])) {
             $excludeRules = explode(",", $pa_options['excludeRules']);
             // Difference between all rules and excluded rules. It will ignore the ones that doesn't exists
             $va_rules_filtered = [];
@@ -269,7 +268,7 @@ class prepopulatePlugin extends BaseApplicationPlugin {
 			    switch($vs_context) {
 			        case 'parent':
 			        	if($force_values) {
-			        		$va_rels = $t_parent->getRelatedItems($vs_target, ['showCurrentOnly' => caGetOption('currentOnly', $va_rule, false)]);
+			        		$va_rels = $t_parent ? $t_parent->getRelatedItems($vs_target, ['showCurrentOnly' => caGetOption('currentOnly', $va_rule, false)]) : [];
 			        	} else {
 							$t_parent = Datamodel::getInstance($t_instance->tableName());
 							if (($vn_parent_id = $t_instance->get($t_instance->getProperty('HIERARCHY_PARENT_ID_FLD'))) && $t_parent->load($vn_parent_id)) {
@@ -471,7 +470,7 @@ class prepopulatePlugin extends BaseApplicationPlugin {
 						switch($vs_mode) {
 							case 'overwrite': // always replace first value we find
 								
-								if(!$force_values) {
+								if($force_values) {
 									$forced_values[$va_parts[1]][] = $attr;
 								} else {
 									$t_instance->replaceAttribute($attr, $va_parts[1]);
@@ -479,7 +478,7 @@ class prepopulatePlugin extends BaseApplicationPlugin {
 								break;
 							case 'overwriteifset':
 								if(strlen($vs_value) > 0) {
-									if(!$force_values) {
+									if($force_values) {
 										$forced_values[$va_parts[1]][] = $attr;
 									} else {
 										$t_instance->replaceAttribute($attr, $va_parts[1]);
@@ -501,7 +500,7 @@ class prepopulatePlugin extends BaseApplicationPlugin {
 			} elseif(sizeof($va_parts)==3) {
 // actual container
 				if($t_instance->hasElement($va_parts[1])) {
-					$va_attr = $t_instance->getAttributesByElement($va_parts[1]);
+					$va_attr = $t_instance->getAttributesByElement($va_parts[1]) ?? [];
 					switch (sizeof($va_attr)) {
 						case 1:
 							switch ($vs_mode) {

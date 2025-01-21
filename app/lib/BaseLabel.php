@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2008-2023 Whirl-i-Gig
+ * Copyright 2008-2024 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -162,16 +162,18 @@ class BaseLabel extends BaseModel {
 	 * the users' current locale setting is used.
 	 */
 	protected function _generateSortableValue() {
-		if ($vs_sort_field = $this->getProperty('LABEL_SORT_FIELD')) {
+		$vs_display_field = $this->getProperty('LABEL_DISPLAY_FIELD');
+		$vs_sort_field = $this->getProperty('LABEL_SORT_FIELD');
+		if ($vs_sort_field && ($vs_sort_field !== $vs_display_field)) {
 			if(strlen($this->get($vs_sort_field)) && Configuration::load()->get($this->LABEL_SUBJECT_TABLE.'_user_settable_sortable_value')) { return; }
-			$vs_display_field = $this->getProperty('LABEL_DISPLAY_FIELD');
 			
 			if (!($vs_locale = $this->getAppConfig()->get('use_locale_for_sortable_titles'))) {
 				$t_locale = new ca_locales();
 				$vs_locale = $t_locale->localeIDToCode($this->get('locale_id'));
 			}
-			$vs_display_value = caSortableValue($this->get($vs_display_field), ['locale' => $vs_locale, 'maxLength' => 255]);
-			
+		
+			$field_len = $this->getFieldInfo($vs_sort_field, 'BOUNDS_LENGTH');
+			$vs_display_value = caSortableValue($this->get($vs_display_field), ['locale' => $vs_locale, 'maxLength' => $field_len[1] ?? 255]);
 			$this->set($vs_sort_field, $vs_display_value);
 		}
 	}

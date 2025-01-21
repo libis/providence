@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2020-2023 Whirl-i-Gig
+ * Copyright 2020-2024 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -29,10 +29,6 @@
  *
  * ----------------------------------------------------------------------
  */
- 
- /**
-  *
-  */
 require_once(__CA_APP_DIR__.'/helpers/accessHelpers.php');
 require_once(__CA_LIB_DIR__.'/Media/MediaViewerManager.php');
 
@@ -78,17 +74,18 @@ class BaseSearchBuilderController extends BaseRefineableSearchController {
 		$t_model = Datamodel::getInstanceByTableName($this->ops_tablename, true);
 		$va_access_values = caGetUserAccessValues($this->request);
 		
-		$search_builder_config = Configuration::load(__CA_CONF_DIR__.'/search_query_builder.conf');
+		$search_builder_config = caGetSearchBuilderConfig();
+		
 		$builder_options = [
-			'filters' => caGetSearchBuilderFilters($t_model, $search_builder_config),
-			'icons' => $search_builder_config->getAssoc('query_builder_icons'),
+			'filters' => caGetSearchBuilderFilters($t_model, $search_builder_config, ['restrictToTypes' => [$this->opn_type_restriction_id]]),
+			'icons' => $search_builder_config->get(['search_builder_icons', 'query_builder_icons']),
 			'sort_filters' => false
 		];
 		$this->view->setVar('options', $builder_options);
 		
 		// Get elements of result context
 		$vn_page_num 			= $this->opo_result_context->getCurrentResultsPageNumber();
-		$vs_search 				= html_entity_decode(stripslashes($this->opo_result_context->getSearchExpression()));	// decode entities encoded to avoid Apache request parsing issues (Eg. forward slashes [/] in searches) 
+		$vs_search 				= html_entity_decode($this->opo_result_context->getSearchExpression());	// decode entities encoded to avoid Apache request parsing issues (Eg. forward slashes [/] in searches) 
 		$vb_is_new_search		= $this->opo_result_context->isNewSearch();
 		
 		if ((bool)$this->request->getParameter('reset', pString) && ($this->request->getParameter('reset', pString) != 'save')) {
@@ -153,7 +150,7 @@ class BaseSearchBuilderController extends BaseRefineableSearchController {
 				'sort_direction' => $vs_sort_direction, 
 				'appendToSearch' => $vs_append_to_search,
 				'checkAccess' => $va_access_values,
-				'no_cache' => $vb_is_new_search,
+				'no_cache' => $vb_is_new_search || !$this->opo_result_context->cacheIsValid(),
 				'dontCheckFacetAvailability' => true,
 				'filterNonPrimaryRepresentations' => true,
 				'rootRecordsOnly' => $this->view->getVar('hide_children'),
@@ -200,6 +197,13 @@ class BaseSearchBuilderController extends BaseRefineableSearchController {
 				
 				$vo_result = $po_search->getResults($va_search_opts);
 				
+				if((!$vo_result || !$vo_result->numHits()) && $po_search->numCriteria() > 1) {
+					$po_search->removeAllCriteria();
+					$po_search->addCriteria('_search', $vs_search);
+					$po_search->execute($va_search_opts);
+					$vo_result = $po_search->getResults($va_search_opts);
+				}
+				
 				if (!is_array($va_facets_with_info = $po_search->getInfoForAvailableFacets()) || !sizeof($va_facets_with_info)) {
 					$this->view->setVar('open_refine_controls', false);
 					$this->view->setVar('noRefineControls', false); 
@@ -212,10 +216,6 @@ class BaseSearchBuilderController extends BaseRefineableSearchController {
 		return $this->Index(['error' => true]);
 	}
 			$vo_result = isset($pa_options['result']) ? $pa_options['result'] : $vo_result;
-		
-			$result_desc = ($this->request->user->getPreference('show_search_result_desc') === 'show') ? $po_search->getSearchResultDesc() : [];
-			$this->view->setVar('result_desc', $result_desc);
-			$this->opo_result_context->setResultDescription($result_desc);
 		
 			$this->opo_result_context->validateCache();
 			
@@ -248,13 +248,21 @@ class BaseSearchBuilderController extends BaseRefineableSearchController {
 			}
 			$this->view->setVar('num_hits', $vo_result->numHits());
 			$this->view->setVar('num_pages', $vn_num_pages = ceil($vo_result->numHits()/$vn_items_per_page));
-			$this->view->setVar('start', ($vn_page_num - 1) * $vn_items_per_page);
 			if ($vn_page_num > $vn_num_pages) { $vn_page_num = 1; }
+			$this->view->setVar('start', $start = ($vn_page_num - 1) * $vn_items_per_page);
 			
-			$vo_result->seek(($vn_page_num - 1) * $vn_items_per_page);
+			$vo_result->seek($start);
 			$this->view->setVar('page', $vn_page_num);
 			$this->view->setVar('search', $vs_search);
 			$this->view->setVar('result', $vo_result);
+			
+			$result_desc = [];
+			if($this->request->user->getPreference('show_search_result_desc') === 'show') {
+				$page_hits = caGetHitsForPage($vo_result, $start, $vn_items_per_page);
+				$result_desc = $po_search->getResultDesc($page_hits);
+			}
+			$this->view->setVar('result_desc', $result_desc);
+			$this->opo_result_context->setResultDesc($result_desc);
 		}
 		//
 		// Set up view for display of results
@@ -293,11 +301,11 @@ class BaseSearchBuilderController extends BaseRefineableSearchController {
 		switch($pa_options['output_format'] ?? null) {
 			# ------------------------------------
 			case 'LABELS':
-				caExportAsLabels($this->request, $vo_result, $this->request->getParameter("label_form", pString), $vs_search, $vs_search, ['output' => 'STREAM', 'checkAccess' => $va_access_values]);
+				caExportAsLabels($this->request, $vo_result, $this->request->getParameter("label_form", pString), $vs_search, $vs_search, ['output' => 'STREAM', 'checkAccess' => $va_access_values, 'display' => $t_display]);
 				break;
 			# ------------------------------------
 			case 'EXPORT':
-				caExportResult($this->request, $vo_result, $this->request->getParameter("export_format", pString), $vs_search, ['output' => 'STREAM']);
+				caExportResult($this->request, $vo_result, $this->request->getParameter("export_format", pString), $vs_search, ['output' => 'STREAM', 'display' => $t_display, 'browseCriteria' => $this->opo_browse->getCriteriaAsStrings(null, ['sense' => 'singular', 'returnAs' => 'array'])]);
 				break;
 			# ------------------------------------
 			case 'HTML': 
@@ -437,14 +445,6 @@ class BaseSearchBuilderController extends BaseRefineableSearchController {
 		}
 		
 		return $va_subtypes;
-	}
-	# -------------------------------------------------------
-	/**
-	 *
-	 */ 
-	public function getPartialResult($pa_options=null) {
-		$pa_options['search'] = $this->opo_browse;
-		return parent::getPartialResult($pa_options);
 	}
 	# -------------------------------------------------------
 	/**

@@ -392,6 +392,7 @@
     <xs:attribute name="code" type="elementCodeType" use="required"/>
     <xs:attribute name="datatype" type="datatypeList" use="required"/>
     <xs:attribute name="list" type="xs:string" use="optional"/>
+    <xs:attribute name="deleted" type="booleanType" use="optional"/>
   </xs:complexType>
 
   <xs:complexType name="typeRestrictions">
@@ -688,6 +689,7 @@
 
   <xs:complexType name="metadataDictionaryEntry">
     <xs:sequence>
+      <xs:element name="labels" type="displayLabels" minOccurs="0" maxOccurs="1"/>
 
       <!-- settings -->
 

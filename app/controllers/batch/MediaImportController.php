@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2012-2023 Whirl-i-Gig
+ * Copyright 2012-2025 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -29,9 +29,6 @@
  *
  * ----------------------------------------------------------------------
  */ 
- /**
-  *
-  */
 require_once(__CA_APP_DIR__."/helpers/batchHelpers.php");
 require_once(__CA_APP_DIR__."/helpers/configurationHelpers.php");
 require_once(__CA_LIB_DIR__."/ApplicationPluginManager.php");
@@ -40,13 +37,14 @@ require_once(__CA_LIB_DIR__."/BatchProcessor.php");
 require_once(__CA_LIB_DIR__."/BatchEditorProgress.php");
 require_once(__CA_LIB_DIR__."/BatchMediaImportProgress.php");
 
-
 class MediaImportController extends ActionController {
 	# -------------------------------------------------------
 	protected $opo_app_plugin_manager;
 	protected $opo_result_context;
 
 	protected $opa_importable_tables = array();
+	
+	protected $user_can_delete_media_on_import = false;
 	# -------------------------------------------------------
 	#
 	# -------------------------------------------------------
@@ -59,13 +57,16 @@ class MediaImportController extends ActionController {
 			return;
 		}
 		
+		$this->user_can_delete_media_on_import = (bool)$po_request->user->canDoAction('allow_delete_media_after_import');
+
+		
 		AssetLoadManager::register('bundleableEditor');
 		AssetLoadManager::register('panel');
 		
 		$this->opo_app_plugin_manager = new ApplicationPluginManager();
 		$this->opo_result_context = new ResultContext($po_request, $this->ops_table_name, ResultContext::getLastFind($po_request, $this->ops_table_name));
 
-		$this->opa_importable_tables = array(
+		$this->opa_importable_tables = [
 			caGetTableDisplayName('ca_objects') => 'ca_objects',
 			caGetTableDisplayName('ca_entities') => 'ca_entities',
 			caGetTableDisplayName('ca_places') => 'ca_places',
@@ -75,7 +76,7 @@ class MediaImportController extends ActionController {
 			caGetTableDisplayName('ca_object_lots') => 'ca_object_lots',
 			caGetTableDisplayName('ca_movements') => 'ca_movements',
 			caGetTableDisplayName('ca_loans') => 'ca_loans',
-		);
+		];
 
 		foreach($this->opa_importable_tables as $vs_key => $vs_table) {
 			if($this->getRequest()->getAppConfig()->get($vs_table.'_disable')) {
@@ -121,6 +122,11 @@ class MediaImportController extends ActionController {
 		$t_rep->set('status', $va_last_settings['ca_object_representations_status'] ?? null);
 		$t_rep->set('access', $va_last_settings['ca_object_representations_access'] ?? null);
 		
+		$target_idno_instance = $t_instance->getIDNoPlugInInstance();
+		$rep_idno_instance = $t_rep->getIDNoPlugInInstance();
+		$this->getView()->setVar('target_idno_is_serial', method_exists($target_idno_instance, 'isSerialFormat') ? $target_idno_instance->isSerialFormat() : false);
+		$this->getView()->setVar('representation_idno_is_serial', method_exists($rep_idno_instance, 'isSerialFormat') ? $rep_idno_instance->isSerialFormat() : false);
+		
 		$va_nav = $t_ui->getScreensAsNavConfigFragment($this->request, null, $this->request->getModulePath(), $this->request->getController(), $this->request->getAction(),
 			[],
 			[]
@@ -153,6 +159,8 @@ class MediaImportController extends ActionController {
 			_t('ends with') => 'ENDS',
 			_t('contains') => 'CONTAINS'
 		], [], ['value' => $va_last_settings['matchType'] ?? null]));
+		
+		$this->view->setVar('user_can_delete_media_on_import', $this->user_can_delete_media_on_import);
 		
 		$this->view->setVar($vs_import_target.'_type_list', $t_instance->getTypeListAsHTMLFormElement($vs_import_target.'_type_id', ['id' => 'primary_type_id'], array('value' => $va_last_settings[$vs_import_target.'_type_id'] ?? null)));
 		$this->view->setVar($vs_import_target.'_parent_type_list', $t_instance->getTypeListAsHTMLFormElement($vs_import_target.'_parent_type_id', ['id' => 'parent_type_id'], array('value' => $va_last_settings[$vs_import_target.'_parent_type_id'] ?? $t_instance->getTypeIDForCode($o_config->get('media_importer_hierarchy_parent_type')))));
@@ -221,12 +229,7 @@ class MediaImportController extends ActionController {
 			$vs_import_target = 'ca_objects';
 		}
 		$directory = $this->request->getParameter('directory', pString);
-
-		if (!caIsValidMediaImportDirectory($directory, ['user_id' => $this->request->getUserID()])) {
-			$this->response->setRedirect($this->request->config->get('error_display_url').'/n/3250?r='.urlencode($this->request->getFullUrlPath()));
-			return;
-		}
-
+		
 		$va_options = array(
 			'sendMail' => (bool)$this->request->getParameter('send_email_when_done', pInteger), 
 			'sendSMS' => (bool)$this->request->getParameter('send_sms_when_done', pInteger), 
@@ -234,7 +237,7 @@ class MediaImportController extends ActionController {
 			
 			'importFromDirectory' => $directory,
 			'includeSubDirectories' => (bool)$this->request->getParameter('include_subdirectories', pInteger),
-			'deleteMediaOnImport' => (bool)$this->request->getParameter('delete_media_on_import', pInteger),
+			'deleteMediaOnImport' => $this->user_can_delete_media_on_import && (bool)$this->request->getParameter('delete_media_on_import', pInteger),
 			'importMode' => $this->request->getParameter('import_mode', pString),
 			'matchMode' => $this->request->getParameter('match_mode', pString),
 			'matchType' => $this->request->getParameter('match_type', pString),
@@ -488,7 +491,7 @@ class MediaImportController extends ActionController {
 		
 		$this->view->setVar('directory_list', caSanitizeArray($va_level_data));
 		
-		
+		$this->response->setContentType("application/json");
 		$this->render('mediaimport/directory_level_json.php');
 	}
 	# ------------------------------------------------------------------
@@ -509,6 +512,7 @@ class MediaImportController extends ActionController {
 		
 		$this->view->setVar("ancestors", $va_ancestors);
 		
+		$this->response->setContentType("application/json");
 		$this->render('mediaimport/directory_ancestors_json.php');
 	}
 	# ------------------------------------------------------------------
@@ -551,6 +555,50 @@ class MediaImportController extends ActionController {
 		}
 
 		$this->view->setVar('response', $response);
+		
+		$this->response->setContentType("application/json");
+		$this->render('mediaimport/file_upload_response_json.php');
+	}
+	# ------------------------------------------------------------------
+	/**
+	 *
+	 */
+	public function DeleteFiles() {
+		if(!$this->user_can_delete_media_on_import) {
+			throw new ApplicationException(_t('Access denied'));
+		}
+		$directory = $this->request->getParameter('directory', pString);
+		$to_delete = explode(';', $directory);
+		
+		$deleted_paths = $error_paths = [];
+		$files_deleted = 0;
+		foreach($to_delete as $d) {
+			if(!($path = caIsValidMediaImportDirectory($d, ['user_id' => $this->request->getUserID(), 'userDirectoryOnly' => true, 'allowFiles' => true]))) {
+				continue;
+			}
+			if($c = caRemoveDirectory($path, true, ['allowFiles' => true])) {
+				$files_deleted += $c;
+				
+				$deleted_paths[] = $path;
+				$tmp = explode('/', $path);
+				array_pop($tmp);
+				Session::setVar('lastMediaImportDirectoryPath', join('/', $tmp));
+			} else {
+				$error_paths[] = $path;
+			}
+		}
+		
+		$tdc = sizeof($to_delete);
+		$ec = sizeof($error_paths);
+		$dc = sizeof($deleted_paths);
+		
+		$response = !$ec && $dc ? 
+			['count' => $files_deleted, 'msg' => ($files_deleted === 1) ? _t('Deleted %1 file', $files_deleted) : _t('Deleted %1 files', $files_deleted)]
+			:
+			['count' => $files_deleted, 'error' => ($ec === $tdc) ? _t('Could not delete files (file permissions may not be correct)') : _t('Could not delete %1 of %2 files (file permissions may not be correct)', $ec, $tdc)];
+		$this->view->setVar('response', $response);
+		
+		$this->response->setContentType("application/json");
 		$this->render('mediaimport/file_upload_response_json.php');
 	}
 	# ------------------------------------------------------------------

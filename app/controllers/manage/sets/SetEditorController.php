@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2009-2023 Whirl-i-Gig
+ * Copyright 2009-2024 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -25,7 +25,6 @@
  *
  * ----------------------------------------------------------------------
  */
-
 require_once(__CA_LIB_DIR__."/BaseEditorController.php");
 require_once(__CA_LIB_DIR__.'/Parsers/ZipStream.php');
 require_once(__CA_APP_DIR__.'/helpers/exportHelpers.php');
@@ -192,6 +191,8 @@ class SetEditorController extends BaseEditorController {
 				$this->view->setVar('representation_height', $va_rep['info'][$vs_thumbnail_version]['HEIGHT']);
 			}
 		}
+		
+		$this->response->setContentType('application/json');
 		$this->render('ajax_set_item_info_json.php');
 	}
 	# -------------------------------------------------------
@@ -310,12 +311,13 @@ class SetEditorController extends BaseEditorController {
 		$is_background = ($this->request->getParameter('background', pInteger) === 1);
 		$export_format = $this->request->getParameter('export_format', pString);
 		$set_id = $this->request->getParameter('set_id', pInteger);
-		
+        $display_id = $this->request->getParameter('display_id', pString);
+        
 		// Check is report should be force-backgrounded because the number of results exceeds the background result size 
 		// threshold declared in the chosen template.
 		if(
 			!$is_background &&
-			caProcessingQueueIsEnabled() &&
+			caTaskQueueIsEnabled() &&
 			is_array($tinfo = caGetPrintTemplateDetails('sets', $export_format)) && 
 			($bthreshold = caGetOption('backgroundThreshold', $tinfo, null)) &&
 			(sizeof($this->opo_result_context->getResultList() ?? []) > $bthreshold)
@@ -341,11 +343,22 @@ class SetEditorController extends BaseEditorController {
 		$subject_table = Datamodel::getTableName($t_set->get('table_num'));
 		$t_instance = Datamodel::getInstanceByTableName($subject_table);
 		
-		if($is_background && caProcessingQueueIsEnabled()) {
+		if($is_background && caTaskQueueIsEnabled()) {
 			$o_tq = new TaskQueue();
 
 			$exp = 'ca_sets.set_code:'.$t_set->get('set_code');
 			$exp_display = _t('Set: %1', $t_set->get('set_code'));
+			
+			$t_download = new ca_user_export_downloads();
+			$t_download->set([
+				'created_on' => _t('now'),
+				'user_id' => $this->request->getUserID(),
+				'status' => 'QUEUED',
+				'download_type' => 'SETS',
+				'metadata' => ['searchExpression' => $exp, 'searchExpressionForDisplay' => $exp_display, 'format' => caExportFormatForTemplate($subject_table, $export_format), 'mode' => 'LABELS', 'table' => $subject_table, 'findType' => null]
+			]);
+			$download_id = $t_download->insert();
+			
 						
 			if ($o_tq->addTask(
 				'dataExport',
@@ -360,7 +373,8 @@ class SetEditorController extends BaseEditorController {
 					'sortDirection' => null,
 					'searchExpression' => $exp,
 					'searchExpressionForDisplay' => $exp_display,
-					'user_id' => $this->request->getUserID()
+					'user_id' => $this->request->getUserID(),
+					'download_id' => $download_id
 				],
 				["priority" => 100, "entity_key" => join(':', ['ca_sets', $set_id, $this->opo_result_context->getSearchExpression()]), "row_key" => null, 'user_id' => $this->request->getUserID()]))
 			{
@@ -381,13 +395,13 @@ class SetEditorController extends BaseEditorController {
 		set_time_limit(7200);
 	
 		$res = $subject_table::createResultSet($record_ids);
-		$res->filterNonPrimaryRepresentations(false);
+		if(method_exists($res, 'filterNonPrimaryRepresentations')) { $res->filterNonPrimaryRepresentations(false); }
 		
 		$filename_stub = $t_set->get('ca_sets.preferred_labels.name');
 		if ($filename_template = $this->request->config->get('ca_sets_export_file_naming')) {
 			$filename_stub = $t_set->getWithTemplate($filename_template);
 		}
-		caExportResult($this->request, $res, $export_format, '_output', ['printTemplateType' => 'sets', 'set' => $t_set, 'filename' => $filename_stub]);
+		caExportResult($this->request, $res, $export_format, '_output', ['display' => $display_id ? new ca_bundle_displays($display_id) : null, 'printTemplateType' => 'sets', 'set' => $t_set, 'filename' => $filename_stub]);
 		
 		return;
 	}

@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2009-2023 Whirl-i-Gig
+ * Copyright 2009-2024 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -28,10 +28,6 @@
  * @license http://www.gnu.org/copyleft/gpl.html GNU Public License version 3
  *
  * ----------------------------------------------------------------------
- */
- 
-/**
- *
  */
 require_once(__CA_APP_DIR__.'/helpers/printHelpers.php');
 require_once(__CA_APP_DIR__."/helpers/themeHelpers.php");
@@ -107,6 +103,7 @@ class BaseFindController extends ActionController {
 	 * Set up basic "find" action
 	 */
 	public function Index($pa_options=null) {
+		$vb_dummy = null;
 		$po_search = isset($pa_options['search']) ? $pa_options['search'] : null;
 		
 		$t_instance 				= Datamodel::getInstanceByTableName($this->ops_tablename, true);
@@ -140,6 +137,7 @@ class BaseFindController extends ActionController {
 		// Set display options
 		$va_display_options = array('table' => $this->ops_tablename, 'user_id' => $this->request->getUserID(), 'access' => __CA_BUNDLE_DISPLAY_READ_ACCESS__);
 		
+		$vb_type = null;
 		$vn_type_id = $this->opo_result_context->getTypeRestriction($vb_type);
 		if(is_null($vn_type_id) || $t_instance::typeCodeForID($vn_type_id)) { // occurrence searches are inherently type-restricted
 			$va_display_options['restrictToTypes'] = $vn_type_id ? [$vn_type_id] : null;
@@ -189,6 +187,8 @@ class BaseFindController extends ActionController {
 			$vs_label_display_field = $t_label->getDisplayField();
 			foreach($display_list as $i => $va_display_item) {
 				$tmp = explode('.', $va_display_item['bundle_name']);
+				
+				if(!is_array($va_display_item['settings'])) { $va_display_item['settings'] = []; }
 
 				if(!isset($tmp[1])){ 
 					$tmp[1] = null;
@@ -206,6 +206,17 @@ class BaseFindController extends ActionController {
 					($va_display_item['bundle_name'] === 'nonpreferred_labels')
 				) {
 					$display_list[$i]['is_sortable'] = true;
+					
+					// Sort on presented field when overriding related bundle with single-tag template
+					// Eg. If showing entity label with template to only show first name, sort should be on first name,
+					// not default related entity field (which is displayname)
+					$template = caGetOption('format', is_array($display_list[$i]['settings'] ?? null) ? $display_list[$i]['settings'] : [], null);
+					$tags = caGetTemplateTags($template);
+					if(is_array($tags) && (sizeof($tags) === 1) && preg_match("!^{$va_display_item['bundle_name']}\.(.*)!", $tags[0], $m)) {
+						$display_list[$i]['bundle_sort'] = $vs_label_table_name.'.'.$m[1];
+						continue;
+					} 
+					
 					$display_list[$i]['bundle_sort'] = $vs_label_table_name.'.'.$t_instance->getLabelSortField();
 					continue;
 				}
@@ -284,7 +295,7 @@ class BaseFindController extends ActionController {
 				if(($tmp[0] === $this->ops_tablename) && (in_array($tmp[1], ['history_tracking_current_value', 'ca_objects_location']))) {
 					$display_list[$i]['is_sortable'] = true;
 					$policy = caGetOption('policy', $va_display_item['settings'], null);
-					$display_list[$i]['bundle_sort'] = $va_display_item['bundle_name'].($policy ? '%policy='.$policy : '');
+					$display_list[$i]['bundle_sort'] = $va_display_item['bundle_name'].($policy ? '~policy='.$policy : '');
 				}
 			}
 		}
@@ -437,7 +448,7 @@ class BaseFindController extends ActionController {
 		// threshold declared in the chosen template.
 		if(
 			!$is_background &&
-			caProcessingQueueIsEnabled() &&
+			caTaskQueueIsEnabled() &&
 			is_array($tinfo = caGetPrintTemplateDetails('labels', $_REQUEST['label_form'] ?? '')) && 
 			($bthreshold = caGetOption('backgroundThreshold', $tinfo, null)) &&
 			(sizeof($this->opo_result_context->getResultList() ?? []) > $bthreshold)
@@ -446,7 +457,7 @@ class BaseFindController extends ActionController {
 			$is_background = true;	
 		}
 		
-		if($is_background && caProcessingQueueIsEnabled()) {
+		if($is_background && caTaskQueueIsEnabled()) {
 			$o_tq = new TaskQueue();
 			
 			if($this->ops_find_type === 'basic_browse') {
@@ -461,6 +472,15 @@ class BaseFindController extends ActionController {
 				$exp_display = $this->opo_result_context->getSearchExpressionForDisplay();
 			}
 			
+			$t_download = new ca_user_export_downloads();
+			$t_download->set([
+				'created_on' => _t('now'),
+				'user_id' => $this->request->getUserID(),
+				'status' => 'QUEUED',
+				'download_type' => 'LABELS',
+				'metadata' => ['searchExpression' => $exp, 'searchExpressionForDisplay' => $exp_display, 'format' => 'PDF', 'mode' => 'LABELS', 'table' => $this->ops_tablename, 'findType' => $this->ops_find_type]
+			]);
+			$download_id = $t_download->insert();
 			if ($o_tq->addTask(
 				'dataExport',
 				[
@@ -474,7 +494,8 @@ class BaseFindController extends ActionController {
 					'sortDirection' => $this->opo_result_context->getCurrentSortDirection(),
 					'searchExpression' => $exp,
 					'searchExpressionForDisplay' => $exp_display,
-					'user_id' => $this->request->getUserID()
+					'user_id' => $this->request->getUserID(),
+					'download_id' => $download_id
 				],
 				["priority" => 100, "entity_key" => join(':', [$this->ops_tablename, $this->ops_find_type, $this->opo_result_context->getSearchExpression()]), "row_key" => null, 'user_id' => $this->request->getUserID()]))
 			{
@@ -486,7 +507,7 @@ class BaseFindController extends ActionController {
 				$this->Index();
 				return;
 			} else {
-				$this->postError(100, _t("Couldn't queue label export", ), "BaseFindController->export()");
+				$this->postError(100, _t("Couldn't queue label export"), "BaseFindController->export()");
 			}
 		}
 		Session::setVar($this->ops_tablename.'_search_export_in_background', false);
@@ -510,7 +531,7 @@ class BaseFindController extends ActionController {
 		// threshold declared in the chosen template.
 		if(
 			!$is_background &&
-			caProcessingQueueIsEnabled() &&
+			caTaskQueueIsEnabled() &&
 			is_array($tinfo = caGetPrintTemplateDetails('results', $_REQUEST['export_format'] ?? '')) && 
 			($bthreshold = caGetOption('backgroundThreshold', $tinfo, null)) &&
 			(sizeof($this->opo_result_context->getResultList() ?? []) > $bthreshold)
@@ -519,7 +540,7 @@ class BaseFindController extends ActionController {
 			$is_background = true;	
 		}
 		
-		if($is_background && caProcessingQueueIsEnabled()) {
+		if($is_background && caTaskQueueIsEnabled()) {
 			$o_tq = new TaskQueue();
 			
 			if($this->ops_find_type === 'basic_browse') {
@@ -535,6 +556,15 @@ class BaseFindController extends ActionController {
 				$exp_display = $this->opo_result_context->getSearchExpressionForDisplay();
 			}
 			
+			$t_download = new ca_user_export_downloads();
+			$t_download->set([
+				'created_on' => _t('now'),
+				'user_id' => $this->request->getUserID(),
+				'status' => 'QUEUED',
+				'download_type' => 'RESULTS',
+				'metadata' => ['searchExpression' => $exp, 'searchExpressionForDisplay' => $exp_display, 'format' => caExportFormatForTemplate($this->ops_tablename, $_REQUEST['export_format'] ?? _t('Unknown')), 'mode' => 'EXPORT', 'table' => $this->ops_tablename, 'findType' => $this->ops_find_type]
+			]);
+			$download_id = $t_download->insert();
 			
 			if ($o_tq->addTask(
 				'dataExport',
@@ -549,7 +579,8 @@ class BaseFindController extends ActionController {
 					'sortDirection' => $this->opo_result_context->getCurrentSortDirection(),
 					'searchExpression' => $exp,
 					'searchExpressionForDisplay' => $exp_display,
-					'user_id' => $this->request->getUserID()
+					'user_id' => $this->request->getUserID(),
+					'download_id' => $download_id
 				],
 				["priority" => 100, "entity_key" => join(':', [$this->ops_tablename, $this->ops_find_type, $this->opo_result_context->getSearchExpression()]), "row_key" => null, 'user_id' => $this->request->getUserID()]))
 			{
@@ -562,7 +593,7 @@ class BaseFindController extends ActionController {
 				
 				return;
 			} else {
-				$this->postError(100, _t("Couldn't queue export", ), "BaseFindController->export()");
+				$this->postError(100, _t("Couldn't queue export"), "BaseFindController->export()");
 			}
 		}
 		Session::setVar($this->ops_tablename.'_search_export_in_background', false);
@@ -626,6 +657,8 @@ class BaseFindController extends ActionController {
 		}
 		$this->view->setVar('num_items_added', (int)$vn_added_items_count);
 		$this->view->setVar('num_items_already_in_set', (int)$vn_dupe_item_count);
+		
+		$this->response->setContentType('application/json');
 		$this->render('Results/ajax_add_to_set_json.php');
 	}
 	# ------------------------------------------------------------------
@@ -673,7 +706,9 @@ class BaseFindController extends ActionController {
 					$this->view->setVar('error', join("; ", $t_set->getErrors()));
 				}
 		
-				$t_set->addLabel(array('name' => $vs_set_name), $g_ui_locale_id, null, true);
+				if(!$t_set->addLabel(['name' => $vs_set_name], $g_ui_locale_id, null, true)) {
+					$this->view->setVar('error', _t('Could not add label to set'));
+				}
 		
 				$vn_added_items_count = $t_set->addItems($va_row_ids, ['user_id' => $this->request->getUserID()]);
 			
@@ -691,6 +726,8 @@ class BaseFindController extends ActionController {
 		$this->view->setVar('set_name', $vs_set_name);
 		$this->view->setVar('set_code', $vs_set_code);
 		$this->view->setVar('num_items_added', $vn_added_items_count);
+		
+		$this->response->setContentType('application/json');
 		$this->render('Results/ajax_create_set_from_result_json.php');
 	}
 	# ------------------------------------------------------------------
@@ -718,6 +755,8 @@ class BaseFindController extends ActionController {
 		} else {
 			$this->view->setVar('error', _t('Search could not be saved'));
 		}
+		
+		$this->response->setContentType('application/json');
 		$this->render('Results/ajax_add_saved_search_json.php');
 	}
 	# ------------------------------------------------------------------
@@ -890,6 +929,8 @@ class BaseFindController extends ActionController {
 	 * Set up variables for "tools" widget
 	 */
 	public function Tools($pa_parameters) {
+		$vb_dummy = null;
+		
 		if (!$items_per_page = $this->opo_result_context->getItemsPerPage()) { $items_per_page = $this->opa_items_per_page[0]; }
 		if (!$vs_view 			= $this->opo_result_context->getCurrentView()) { 
 			$tmp = array_keys($this->opa_views);
@@ -1003,7 +1044,7 @@ class BaseFindController extends ActionController {
 				['request' => $this->getRequest(), 'restrictToDisplay' => $this->request->config->get('restrict_find_result_sort_options_to_current_display') ? $display_id : null]));
 		
 		$this->view->setVar('display_id', $display_id);
-		$this->view->setVar('columns',ca_bundle_displays::getColumnsForResultsEditor($display_list, ['request' => $this->request]));
+		$this->view->setVar('columns', ca_bundle_displays::getColumnsForResultsEditor($display_list, ['request' => $this->request]));
 		$this->view->setVar('num_rows', sizeof($ids));
 		
 		$this->render("Results/results_editable_html.php");
@@ -1052,6 +1093,8 @@ class BaseFindController extends ActionController {
 			['restrictToDisplay' => $this->request->config->get('restrict_find_result_sort_options_to_current_display') ? $display_id : null]);
 		
 		$this->view->setVar('data', $data);
+		
+		$this->response->setContentType('application/json');
 		$this->render("Results/ajax_results_editable_data_json.php");
 	}
 	# ------------------------------------------------------------------
@@ -1062,6 +1105,7 @@ class BaseFindController extends ActionController {
 	 *  (2) "complex" editing from a popup editing window. Data is submitted from a form as standard editor UI form data from a psuedo editor UI screen.
 	 */
 	public function saveResultsEditorData() {
+		$vb_dummy = null;
 		if(!$this->request->user->canDoAction('can_use_spreadsheet_editor_'.$this->ops_tablename)) { 
 			throw new ApplicationException(_t('Cannot use editor for %1', $this->ops_tablename));
 		}
@@ -1081,6 +1125,7 @@ class BaseFindController extends ActionController {
 		
 		$this->view->setVar('response', $response);
 		
+		$this->response->setContentType('application/json');
 		$this->render("Results/ajax_save_results_editable_data_json.php");
 	}
 	# ------------------------------------------------------------------
@@ -1154,6 +1199,7 @@ class BaseFindController extends ActionController {
 	 * @return array 
 	 */
 	private function _getDisplayList($display_id) {
+		$dummy = null;
 		$t_display = new ca_bundle_displays($display_id);
 		
 		$vs_view = $this->opo_result_context->getCurrentView();

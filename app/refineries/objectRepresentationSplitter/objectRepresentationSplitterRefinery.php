@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2014-2022 Whirl-i-Gig
+ * Copyright 2014-2024 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -126,6 +126,15 @@ BaseRefinery::$s_refinery_settings['objectRepresentationSplitter'] = array(
 		'label' => _t('Attributes'),
 		'description' => _t('Sets or maps metadata for the object record by referencing the metadataElement code and the location in the data source where the data values can be found.')
 	),
+	'objectRepresentationSplitter_attributeDelimiters' => array(
+		'formatType' => FT_TEXT,
+		'displayType' => DT_SELECT,
+		'width' => 10, 'height' => 1,
+		'takesLocale' => false,
+		'default' => '',
+		'label' => _t('Attribute delimiters'),
+		'description' => _t('Delimiters to use for each mapped attribute.')
+	),
 	'objectRepresentationSplitter_relationshipTypeDefault' => array(
 		'formatType' => FT_TEXT,
 		'displayType' => DT_FIELD,
@@ -179,6 +188,15 @@ BaseRefinery::$s_refinery_settings['objectRepresentationSplitter'] = array(
 		'default' => false,
 		'label' => _t('Set first identified media as primary'),
 		'description' => ''
+	),
+	'objectRepresentationSplitter_dontCreate' => array(
+		'formatType' => FT_TEXT,
+		'displayType' => DT_SELECT,
+		'width' => 10, 'height' => 1,
+		'takesLocale' => false,
+		'default' => false,
+		'label' => _t('Do not create new records'),
+		'description' => _t('If set splitter will only match on existing records and will not create new ones.')
 	),
 	'objectRepresentationSplitter_matchMode' => array(
 		'formatType' => FT_TEXT,

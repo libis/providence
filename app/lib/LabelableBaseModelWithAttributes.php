@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2008-2022 Whirl-i-Gig
+ * Copyright 2008-2024 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -29,21 +29,15 @@
  *
  * ----------------------------------------------------------------------
  */
- 
- /**
-  *
-  */ 
-define('__CA_LABEL_TYPE_PREFERRED__', 0);
-define('__CA_LABEL_TYPE_NONPREFERRED__', 1);
-define('__CA_LABEL_TYPE_ANY__', 2);
-
 require_once(__CA_LIB_DIR__.'/BaseModelWithAttributes.php');
 require_once(__CA_LIB_DIR__.'/BaseModel.php');
 require_once(__CA_LIB_DIR__.'/ILabelable.php');
-require_once(__CA_APP_DIR__.'/models/ca_locales.php');
-require_once(__CA_APP_DIR__.'/models/ca_users.php');
 require_once(__CA_APP_DIR__.'/helpers/accessHelpers.php');
 require_once(__CA_APP_DIR__.'/helpers/displayHelpers.php');
+
+define('__CA_LABEL_TYPE_PREFERRED__', 0);
+define('__CA_LABEL_TYPE_NONPREFERRED__', 1);
+define('__CA_LABEL_TYPE_ANY__', 2);
 
 class LabelableBaseModelWithAttributes extends BaseModelWithAttributes implements ILabelable {
 	# ------------------------------------------------------------------
@@ -589,8 +583,10 @@ class LabelableBaseModelWithAttributes extends BaseModelWithAttributes implement
 	 *		restrictToTypes = Restrict returned items to those of the specified types. An array of list item idnos and/or item_ids may be specified. [Default is null]			 
  	 *		excludeTypes = Restrict returned items to those that are not of the specified types. An array of list item idnos and/or item_ids may be specified. [Default is null]			 
 	 *		dontIncludeSubtypesInTypeRestriction = If restrictToTypes is set, by default the type list is expanded to include subtypes (aka child types). If set, no expansion will be performed. [Default is false]
+	 *		includeSubtypes = If restrictToTypes is set, by default the type list is expanded to include subtypes (aka child types). If set to false, no expansion will be performed. [Default is true]
 	 *		includeDeleted = If set deleted rows are returned in result set. [Default is false]
 	 *		dontFilterByACL = If set don't enforce item-level ACL rules. [Default is false]
+	 *		filterDeaccessionedRecords = Omit deaccessioned records from the result set. [Default is false]
 	 *
 	 * @return mixed Depending upon the returnAs option setting, an array, subclass of LabelableBaseModelWithAttributes or integer may be returned.
 	 */
@@ -600,13 +596,15 @@ class LabelableBaseModelWithAttributes extends BaseModelWithAttributes implement
 		$t_instance = null;
 		$vs_table = get_called_class();
 		
+		$include_deleted = caGetOption('includeDeleted', $pa_options, false);
+		
 		$t_instance = new $vs_table;
 		if (!is_array($pa_values)) {
 			if ((int)$pa_values > 0) { 
 				$pa_values = array($t_instance->primaryKey() => (int)$pa_values);
 				if (!isset($pa_options['returnAs'])) { $pa_options['returnAs'] = 'firstModelInstance'; }
 			} elseif($pa_values === '*') {
-				$pa_values = (caGetOption('includeDeleted', $pa_options, false) || !$t_instance->hasField('deleted')) ? [] : ['deleted' => 0];
+				$pa_values = ($include_deleted || !$t_instance->hasField('deleted')) ? [] : ['deleted' => 0];
 			}
 		}
 		
@@ -625,6 +623,12 @@ class LabelableBaseModelWithAttributes extends BaseModelWithAttributes implement
 		$vb_purify_with_fallback 	= caGetOption('purifyWithFallback', $pa_options, false);
 		$vb_purify 					= $vb_purify_with_fallback ? true : caGetOption('purify', $pa_options, true);
 		
+		$filter_deaccessioned 		= caGetOption('filterDeaccessionedRecords', $pa_options, false);
+		
+		if($filter_deaccessioned && $t_instance->hasField('is_deaccessioned')) {
+			$pa_values['is_deaccessioned'] = 0;
+		}
+		
 		$vn_table_num = $t_instance->tableNum();
 		$vs_table_pk = $t_instance->primaryKey();
 		
@@ -632,15 +636,21 @@ class LabelableBaseModelWithAttributes extends BaseModelWithAttributes implement
 		
 		$va_type_restriction_sql = [];
 		$va_type_restriction_params = [];
+		
+		$dont_include_subtypes_in_type_restriction = isset($pa_options['dontIncludeSubtypesInTypeRestriction']) ? (bool)$pa_options['dontIncludeSubtypesInTypeRestriction'] : null;
+		if(!is_null($dont_include_subtypes_in_type_restriction)) {
+			$include_subtypes = $dont_include_subtypes_in_type_restriction;
+		} else {
+			$include_subtypes = isset($pa_options['includeSubtypes']) ? (bool)$pa_options['includeSubtypes'] : true;
+		}
+	
 		if ($va_restrict_to_types = caGetOption('restrictToTypes', $pa_options, null)) {
-			$include_subtypes = caGetOption('dontIncludeSubtypesInTypeRestriction', $pa_options, false);
 			if (is_array($va_restrict_to_types = caMakeTypeIDList($vs_table, $va_restrict_to_types, ['dontIncludeSubtypesInTypeRestriction' => $include_subtypes])) && sizeof($va_restrict_to_types)) {
 				$va_type_restriction_sql[] = "{$vs_table}.".$t_instance->getTypeFieldName()." IN (?)";
 				$va_type_restriction_params[] = $va_restrict_to_types;
 			}
 		}
 		if ($va_exclude_types = caGetOption('excludeTypes', $pa_options, null)) {
-			$include_subtypes = caGetOption('dontIncludeSubtypesInTypeRestriction', $pa_options, false);
 			if (is_array($va_exclude_types = caMakeTypeIDList($vs_table, $va_exclude_types, ['dontIncludeSubtypesInTypeRestriction' => $include_subtypes])) && sizeof($va_restrict_to_types)) {
 				$va_type_restriction_sql[] = "{$vs_table}.".$t_instance->getTypeFieldName()." NOT IN (?)";
 				$va_type_restriction_params[] = $va_exclude_types;
@@ -661,14 +671,14 @@ class LabelableBaseModelWithAttributes extends BaseModelWithAttributes implement
 	
 		// Check for intrinsics in value array
 		if (is_array($pa_values) && !sizeof($pa_values)) { 
-			return parent::find($t_instance->hasField('deleted') ? ['deleted' => 0] : '*', $pa_options);
+			return parent::find((!$include_deleted && $t_instance->hasField('deleted')) ? ['deleted' => 0] : '*', $pa_options);
 		}
 		$vb_has_simple_fields = false;
 		foreach ($pa_values as $vs_field => $va_field_values) {
 			foreach ($va_field_values as  $va_field_value) {
 				$vs_op = $va_field_value[0];
 				$vm_value = $va_field_value[1];
-				if ($vm_value === '*') { return parent::find($t_instance->hasField('deleted') ? ['deleted' => 0] : '*', $pa_options); }
+				if ($vm_value === '*') { return parent::find((!$include_deleted && $t_instance->hasField('deleted')) ? ['deleted' => 0] : '*', $pa_options); }
 				if ($t_instance->hasField($vs_field)) { $vb_has_simple_fields = true; break; }
 			}
 		}
@@ -1114,7 +1124,7 @@ class LabelableBaseModelWithAttributes extends BaseModelWithAttributes implement
 			$va_sql_params[] = $pa_check_access;
 		}
 					
-		$vs_deleted_sql = ($t_instance->hasField('deleted')) ? "({$vs_table}.deleted = 0)" : '';
+		$vs_deleted_sql = (!$include_deleted && $t_instance->hasField('deleted')) ? "({$vs_table}.deleted = 0)" : '';
 		
 		$va_sql = [];
 		if ($vs_wheres = join(" {$ps_boolean} ", $va_label_sql)) { $va_sql[] = "({$vs_wheres})"; }
@@ -1326,7 +1336,7 @@ class LabelableBaseModelWithAttributes extends BaseModelWithAttributes implement
 		$force_to_lowercase = caGetOption('forceToLowercase', $options, false);
 		$mode = caGetOption('mode', $options, null);
 	
-		$table_name = $table_name ? $table_name : get_called_class();
+		$table_name = get_called_class();
 		if (!($t_instance = Datamodel::getInstanceByTableName($table_name, true))) { return null; }
 		
 		if ($restrict_to_types = caGetOption('restrictToTypes', $options, null)) {
@@ -2517,7 +2527,8 @@ class LabelableBaseModelWithAttributes extends BaseModelWithAttributes implement
 		// generate list of inital form values; the label bundle Javascript call will
 		// use the template to generate the initial form
 		$va_inital_values = array();
-		$va_new_labels_to_force_due_to_error = array();
+		
+		$va_new_labels_to_force_due_to_error = [];
 		
 		if ($this->getPrimaryKey()) {
 			if (is_array($va_labels) && sizeof($va_labels)) {
@@ -2554,7 +2565,17 @@ class LabelableBaseModelWithAttributes extends BaseModelWithAttributes implement
 		$o_view->setVar('batch', (bool)(isset($pa_options['batch']) && $pa_options['batch']));
 		
 		$forced_values = caGetOption('forcedValues', $pa_options, null);
-		$o_view->setVar('new_labels', array_merge($va_new_labels_to_force_due_to_error, $forced_values['preferred_labels'] ?? []));
+		
+		foreach($forced_values['preferred_labels'] ?? [] as $fpl) {
+			if(isset($fpl['label_id'])) {
+				$va_inital_values[$fpl['label_id']] = $fpl;
+				unset($fpl['label_id']);
+			} else {
+				$va_new_labels_to_force_due_to_error[] = $fpl;
+			}
+		}
+		
+		$o_view->setVar('new_labels', $va_new_labels_to_force_due_to_error);
 		$o_view->setVar('label_initial_values', $va_inital_values);
 		
 		$bundle_preview = '';
@@ -2653,12 +2674,22 @@ class LabelableBaseModelWithAttributes extends BaseModelWithAttributes implement
 			}
 		}
 		
+		$va_new_labels_to_force_due_to_error = [];
 		if (is_array($this->opa_failed_nonpreferred_label_inserts) && sizeof($this->opa_failed_nonpreferred_label_inserts)) {
 			$va_new_labels_to_force_due_to_error = $this->opa_failed_preferred_label_inserts;
 		}
 		
 		$forced_values = caGetOption('forcedValues', $pa_options, null);
-		$o_view->setVar('new_labels', array_merge($va_new_labels_to_force_due_to_error, $forced_values['nonpreferred_labels'] ?? []));
+		foreach($forced_values['nonpreferred_labels'] ?? [] as $fpl) {
+			if(isset($fpl['label_id'])) {
+				$va_inital_values[$fpl['label_id']] = $fpl;
+				unset($fpl['label_id']);
+			} else {
+				$va_new_labels_to_force_due_to_error[] = $fpl;
+			}
+		}
+		
+		$o_view->setVar('new_labels', $va_new_labels_to_force_due_to_error);
 		$o_view->setVar('label_initial_values', $va_inital_values);
 		$o_view->setVar('batch', (bool)(isset($pa_options['batch']) && $pa_options['batch']));
 		
@@ -3384,7 +3415,7 @@ class LabelableBaseModelWithAttributes extends BaseModelWithAttributes implement
 				r.{$vs_pk} = ?
 		", $vn_id);
 		
-		$va_roles = array();
+		$va_roles = [];
 		
 		while($qr_res->nextRow()) {
 			$va_row = array();
@@ -3393,7 +3424,7 @@ class LabelableBaseModelWithAttributes extends BaseModelWithAttributes implement
 			}
 			
 			if ($vb_return_for_bundle) {
-				$va_row['label'] = $va_role['name'];
+				$va_row['label'] = $va_row['name'];
 				$va_row['id'] = $va_row['role_id'];
 				$va_roles[(int)$qr_res->get('relation_id')] = $va_row;
 			} else {

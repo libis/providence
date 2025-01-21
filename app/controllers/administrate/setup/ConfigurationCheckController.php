@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2009-2021 Whirl-i-Gig
+ * Copyright 2009-2024 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -25,11 +25,18 @@
  *
  * ----------------------------------------------------------------------
  */
-
 include_once(__CA_LIB_DIR__."/Search/SearchEngine.php");
 include_once(__CA_LIB_DIR__."/Print/PDFRenderer.php");
 
 class ConfigurationCheckController extends ActionController {
+	# -------------------------------------------------------
+	public function __construct(&$po_request, &$po_response, $pa_view_paths=null) {
+		parent::__construct($po_request, $po_response, $pa_view_paths);
+		
+		if(!$po_request || !$po_request->isLoggedIn() || !$po_request->user->canDoAction('can_view_configuration_check')) {
+			throw new AccessException(_t('Access denied'));
+		}
+	}
 	# ------------------------------------------------
 	public function DoCheck(){
 		define('__CA_DONT_CACHE_EXTERNAL_APPLICATION_PATHS__', true);	// Force all plugins to reload their paths
@@ -42,6 +49,13 @@ class ConfigurationCheckController extends ActionController {
 		$vo_search_config_settings = SearchEngine::checkPluginConfiguration();
 		$this->view->setVar('search_config_settings',$vo_search_config_settings);
 		$this->view->setVar('search_config_engine_name',  SearchEngine::getPluginEngineName());
+		
+		// Search queue
+		$sq_count = ca_search_indexing_queue::count();
+		$sq_is_running = ca_search_indexing_queue::isRunning();
+		
+		$this->view->setVar('search_indexing_queue_count', $sq_count);
+		$this->view->setVar('search_indexing_queue_is_running', $sq_is_running);
 		
 		// Media
 		$t_media = new Media();
