@@ -42,7 +42,7 @@ $window_title = strip_tags($window_title);
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
 
 		<title><?= $this->appconfig->get("window_title").($window_title ? " : {$window_title}" : ''); ?></title>
-
+		<link rel="icon" href="<?= $this->request->getBaseUrlPath(); ?>/favicon.ico" type="image/x-icon" />
 		<script type="text/javascript">window.caBasePath = '<?= $this->request->getBaseUrlPath(); ?>';</script>
 <?php
 	print AssetLoadManager::getLoadHTML($this->request, ['outputTarget' => 'header']);
