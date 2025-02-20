@@ -207,3 +207,8 @@ form#WatchedItemsListForm table#caItemList {
 #summary .heading {
     vertical-align: top;
 }
+
+
+
+/* hide quick search results with zero resultset */
+.quickSearchNoResults {     display: none; }
