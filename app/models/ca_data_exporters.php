@@ -1337,7 +1337,14 @@ class ca_data_exporters extends BundlableLabelableBaseModelWithAttributes {
 			$old_ui_locale = $g_ui_locale;
 			$g_ui_locale = null;
 		}
-		
+
+		/* hack the hack - queryparam lang overall preference */
+		if (isset($_GET['lang'])){
+			$g_ui_locale = $_GET['lang'];
+			$get_options['locale'] = $g_ui_locale;
+		}
+		/* CA will reset global lang anyway */
+
 		$skip_if_expr = $settings['skipIfExpression'] ?? null;
 		$expr_tags = caGetTemplateTags($skip_if_expr);
 
