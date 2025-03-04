@@ -213,6 +213,13 @@ class InformationServiceAttributeValue extends AttributeValue implements IAttrib
 	 *
 	 */
 	public function getDisplayValue($pa_options=null) {
+
+		/*
+		if( isset($pa_options['url']) && $pa_options['url']==1 ){
+			return $this->ops_uri_value;
+		}
+		*/
+
 		return $this->ops_text_value;
 	}
 	# ------------------------------------------------------------------
