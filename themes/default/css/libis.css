@@ -277,11 +277,24 @@ form#WatchedItemsListForm table#caItemList {
 }
 
 
-#summary .heading {
-    vertical-align: top;
+/* style the environment badges */
+#topNav span.environment, #topNav span.environment.quality{
+    float: left;
+    position: relative;
+    color: white;
+    font-size: 2em;
+    left: 0;
+    top: 10;
+    background-color: #881362;
+    padding: 8px;
+    margin: 5px;
 }
-
-
-
-/* hide quick search results with zero resultset */
-.quickSearchNoResults {     display: none; }
+#topNav span.environment.test{
+    background-color : #22c9e1;
+}
+#topNav span.environment.sandbox{
+    background-color : #CA2D92;
+}
+#topNav span.environment.production{
+    display:none;
+}
