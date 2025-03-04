@@ -298,3 +298,12 @@ form#WatchedItemsListForm table#caItemList {
 #topNav span.environment.production{
     display:none;
 }
+
+
+/* hide quick search results with zero resultset */
+.quickSearchNoResults {     display: none; }
+
+
+#summary .heading {
+    vertical-align: top;
+}
