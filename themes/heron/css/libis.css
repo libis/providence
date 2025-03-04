@@ -1,0 +1,309 @@
+.objectFullImageContainer{
+    width: auto;
+    min-width: 0;
+    margin:0;
+}
+
+.objectFullImageContainer img{
+    margin-right:20px;
+    margin-bottom:10px;
+}
+
+
+/* fix lookup field dropdown detaching from input , set to auto in base.css */
+html, body {
+    overflow: visible !important;
+}
+
+
+.objectFullText{
+    overflow: auto; /*libis: prevent text beneath image on search result page. */
+}
+
+.ui-autocomplete{
+    position: relative;
+    max-width: fit-content;
+}
+
+/* easier dimensions separation */
+.dimensions .dimensions_separator:first-child{
+    display: none;
+}
+
+/* doesn't let the optionbox float in higher folds */
+#searchOptionsBox, .relatedListSearchOptionsBox {
+    position:fixed;
+}
+
+/* form field tooltips, in compbination with displayHelpers.php */
+.tooltipFormat {
+    width:  25% !important;
+    max-width: 800px !important;
+    overflow:auto;
+}
+
+
+
+/* make quickaddheader a bit more responsive */
+div.quickAddDialogHeader{
+    position:relative;
+    width:100%;
+}
+
+.caRelationQuickAddPanel{
+    width:93vw;
+    max-width:900px;
+}
+
+@media screen and (max-width: 700px) {
+    .quickAddDialogHeader div{
+        float:right !important;
+        margin-bottom:5px;
+        margin-right:10px;
+    }
+    .quickAddDialogHeader .quickAddTypeList {
+        float:none !important;
+        margin-left:10px;
+
+    }
+}
+
+
+
+
+/* quick-fix items behind footer */
+form#WatchedItemsListForm table#caItemList {
+    margin-bottom: 100px;
+}
+
+
+.tag {
+    background: #1ab3c8;
+    display: inline-block;
+    color: #fff;
+    position: relative;
+    padding: 10px;
+    padding-right:11px;
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+    margin-right:20px;
+    margin-left:10px;
+    text-decoration: none;
+}
+
+.tag:hover {
+    background-color: #739fe4;
+}
+
+.tag:before {
+    background: #fff;
+    width: 10px;
+    height: 10px;
+    content: "";
+    display: inline-block;
+    border-radius: 20px;
+    margin: 0 5px 0 0;
+}
+
+.tag:after {
+    display: inline-block;
+    border: 16px solid;
+    border-color: transparent transparent transparent #1ab3c8;
+    height: 0;
+    width: 0;
+    position: absolute;
+    right: -32px;
+    top: 0;
+    content: "";
+    display: inline-block;
+}
+
+
+.tag:hover:after {
+    border-color: transparent transparent transparent #739fe4;
+}
+
+.caInformationServiceDetail{
+    padding:8px;
+}
+.caInformationServiceDetail .label{
+    font-weight:bolder;
+}
+.col_taxonomy{
+    display:inline-block;
+    margin:2px;
+    margin-right:10px;
+}
+
+
+#leftNav h2{
+	word-break: break-word;
+}
+
+
+#leftNav h2 a.sf-menu-selected{
+	height:auto;
+}
+
+/* easier dimensions separation */
+.dimensions .dimensions_separator:first-child{
+    display: none;
+}
+
+
+.caItemListSortControls {
+    display: none;
+
+    padding: 3px 5px 5px 5px;
+    background-color: #fff;
+
+    border: 1px solid #e6e6e6;
+}
+
+.caAnnoEditorPanel {			/* full-window panel */
+    border: 2px solid #999999;
+}
+
+/*
+.find_results_container{
+    display: grid;
+    grid-gap: 5px;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    grid-template-rows: repeat(2, 100px);
+}
+.find_results_container div a img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+*/
+
+
+/* doesn't let the optionbox float in higher folds */
+#searchOptionsBox, .relatedListSearchOptionsBox {
+    position:fixed;
+}
+
+/* form field tooltips, in compbination with displayHelpers.php */
+.tooltipFormat {
+    width:  25%px !important;
+    max-width: 800px !important;
+    overflow:auto;
+}
+
+/*
+#logo img{
+    height:40px;
+}
+*/
+
+/* style AAT more info */
+.caInformationServiceDetail table.aat_alternate tr:not(:first-child) {
+    border: 1px solid black;
+}
+.caInformationServiceDetail table.aat_alternate td {
+    padding: 10px;
+    margin: 10px;
+}
+.caInformationServiceDetail table.aat_alternate {
+    border-collapse: collapse;
+    border-spacing: 0 10px;
+}
+.caInformationServiceDetail table.aat_alternate tr td:first-child {
+    width: 30px;
+}
+
+
+/* prettify the listings */
+.caInformationServiceDetail table.aat_alternate tr td:first-child {
+    position: relative;
+    /*padding-left: 30px;*/
+    text-align: center;
+    vertical-align: middle;
+}
+
+.caInformationServiceDetail table.aat_alternate tr td:first-child::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+
+}
+
+.caInformationServiceDetail table.aat_alternate tr td:first-child span {
+    position: relative;
+    z-index: 1;
+}
+
+.caInformationServiceDetail table.aat_alternate tr td.nl::before{
+    background-color: yellow;
+}
+.caInformationServiceDetail table.aat_alternate tr td.fr::before{
+    background-color: #7DDE92;
+}
+.caInformationServiceDetail table.aat_alternate tr td.en::before{
+    background-color: #F8FFE5;
+}
+.caInformationServiceDetail table.aat_alternate tr td.it::before{
+    background-color: #3083DC;
+}
+.caInformationServiceDetail table.aat_alternate tr td.el::before{
+    background-color: #B0C6CE;
+}
+.caInformationServiceDetail table.aat_alternate tr td.sr::before{
+    background-color: #B2E4DB;
+}
+.caInformationServiceDetail table.aat_alternate tr td.he::before{
+    background-color: #A9FBD7;
+}
+.caInformationServiceDetail table.aat_alternate tr td.de::before{
+    background-color: #D7FDEC;
+}
+.caInformationServiceDetail table.aat_alternate tr td.es::before{
+    background-color: #2EBFA5;
+}
+.caInformationServiceDetail table.aat_alternate tr td.zh::before{
+    background-color: #EAFDCF;
+}
+
+/* visually separate repeating containers a little bit */
+.bundleContainer div.repeatingItem:nth-child(even) {
+    /* background-color: #f2f2f2; */
+    border-left: 5px solid #f2f2f2;
+}
+
+
+/* style the environment badges */
+#topNav span.environment, #topNav span.environment.quality{
+    float: left;
+    position: relative;
+    color: white;
+    font-size: 2em;
+    left: 0;
+    top: 10;
+    background-color: #881362;
+    padding: 8px;
+    margin: 5px;
+}
+#topNav span.environment.test{
+    background-color : #22c9e1;
+}
+#topNav span.environment.sandbox{
+    background-color : #CA2D92;
+}
+#topNav span.environment.production{
+    display:none;
+}
+
+
+/* hide quick search results with zero resultset */
+.quickSearchNoResults {     display: none; }
+
+
+#summary .heading {
+    vertical-align: top;
+}
