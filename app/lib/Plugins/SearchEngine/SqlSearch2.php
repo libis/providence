@@ -463,7 +463,7 @@ class WLPlugSearchEngineSqlSearch2 extends BaseSearchPlugin implements IWLPlugSe
 	 		if(is_array($ret)) { return $ret; }
 	 	}
 	 	
-	 	if(!is_null($anchor_mode = $this->_getAnchorMode($words[0]))) {
+	 	if(!is_null($words[0]) && strlen($words[0]) && !is_null($anchor_mode = $this->_getAnchorMode($words[0]))) {
 			$words[0] = mb_substr($words[0], 1);
 		}
 		
@@ -512,6 +512,24 @@ class WLPlugSearchEngineSqlSearch2 extends BaseSearchPlugin implements IWLPlugSe
 				$use_boost = false;
 			} else{
 				$params[] = $text;
+			}
+			
+			$anchor_sql = '';
+			switch($anchor_mode) {
+				case 'EXACT':
+					$anchor_sql = " AND (swi.word_index = {$w} AND swi.word_count = {$wc})";
+					break;
+				case 'START':
+					$anchor_sql = " AND swi.word_index = {$w}";
+					if(!$has_wildcard && (bool)$this->search_config->get('add_wildcard_on_begins_searches')) { 
+						$word_op = 'LIKE';
+						$text .= '%';
+						array_pop($params); array_push($params, $text);
+					}
+					break;
+				case 'END':
+					$anchor_sql = " AND ((swi.word_count >= {$wc}) AND (swi.word_index = (swi.word_count - {$wc} + {$w})))";
+					break;
 			}
 			
 	 		if($is_blank || $is_not_blank) { $use_boost = false; }
@@ -565,21 +583,7 @@ class WLPlugSearchEngineSqlSearch2 extends BaseSearchPlugin implements IWLPlugSe
 				}
 			}
 		
-			$private_sql = ($this->getOption('omitPrivateIndexing') ? ' AND swi.access = 0' : '');
-				
-			$anchor_sql = '';
-			switch($anchor_mode) {
-				case 'EXACT':
-					$anchor_sql = " AND (swi.word_index = {$w} AND swi.word_count = {$wc})";
-					break;
-				case 'START':
-					$anchor_sql = " AND swi.word_index = {$w}";
-					break;
-				case 'END':
-					$anchor_sql = " AND ((swi.word_count >= {$wc}) AND (swi.word_index = (swi.word_count - {$wc} + {$w})))";
-					break;
-			}
-		
+			$private_sql = ($this->getOption('omitPrivateIndexing') ? ' AND swi.access = 0' : '');		
 			if ($is_bare_wildcard) {
 				$t = Datamodel::getInstance($subject_tablenum, true);
 				$pk = $t->primaryKey();
@@ -706,6 +710,10 @@ class WLPlugSearchEngineSqlSearch2 extends BaseSearchPlugin implements IWLPlugSe
 						break;
 					case 'START':
 						$anchor_sql = " AND swi.word_index = {$w}";
+						if(!$has_wildcard && (bool)$this->search_config->get('add_wildcard_on_begins_searches')) { 
+							$word_op = 'LIKE';
+							$word .= '%';
+						}
 						break;
 					case 'END':
 						$anchor_sql = " AND ((swi.word_count >= {$wc}) AND (swi.word_index = (swi.word_count - {$wc} + {$w})))";
