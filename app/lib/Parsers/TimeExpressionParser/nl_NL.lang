@@ -25,7 +25,7 @@ monthTable = {
 # List of day names, starting with Sunday
 dayListDisplay = [zondag, maandag, dinsdag, woensdag, donderdag, vrijdag, zaterdag]
 
-rangePreConjunctions = [van, vanaf, tussen]
+rangePreConjunctions = [van, vanaf, tussen, voor, na]
 rangeConjunctions = [tot, –, -, en, .., tem, t.e.m]
 
 dateTimeConjunctions = [om,@]
@@ -41,8 +41,8 @@ meridianTable = {
 	p.m. = pm
 }
 
-dateCircaIndicator = [circa, c, c., ca, ca.]
-dateProbablyIndicator = [probably, possibly]
+dateCircaIndicator = [circa, c, c., ca, ca., rond]
+dateProbablyIndicator = [waarschijnlijk, w.s., ws]
 dateUncertaintyIndicator = [~]
 dateUncertaintyYearIndicator = [y]
 dateUncertaintyDayIndicator = [d]
@@ -56,29 +56,38 @@ dateBP = [bp]
 dateADIndicator = ad
 dateBCIndicator = bc
 ADBCTable = {
-	a.d. = ad, n.Chr. = ad, na Chr. = ad, na Christus = ad, nc = ad,
-	b.c. = bc, v.Chr. = bc, voor Christus = bc, vc = bc 
+	a.d. = ad,
+	n.Chr. = ad,
+	na Chr. = ad,
+	na Christus = ad,
+	AD = ad,
+	nc = ad,
+	b.c. = bc,
+	v.Chr. = bc,
+	voor Christus = bc,
+	vc = bc,
+	BC = bc
 }
 
 nowDate = [nu]
 todayDate = [vandaag]
-yesterdayDate = [gisteren]
+yesterdayDate = [gisteren,gister]
 tomorrowDate = [morgen]
-undatedDate = [undated, unknown]
+undatedDate = [ongedateerd, onbekend, s.d.]
 
 presentDate = [heden, ?, ??, ???, ????]
-beforeQualifier = [voor]
-earlyQualifier = [early]
-midQualifier = [mid, middle]
-lateQualifier = [late]
-diedQualifier = [died, d, d.]
+beforeQualifier = [voor, v  r,pre,vooraf]
+earlyQualifier = [begin,vroeg,vroege]
+midQualifier = [midden]
+lateQualifier = [eind,late,laat]
+diedQualifier = [ovl., d, d.]
 afterQualifier = [na]
-bornQualifier = [born, b, b.]
+bornQualifier = [geb., b, b.]
 
 # Text to indicate century (as in "20th century")
 centuryIndicator = [eeuw]
 
-# Text to indicate decdae (as in "1920s")
+# Text to indicate decade (as in "1920s")
 decadeIndicator = [s]
 
 # list of numeric suffixes, starting with the one for zero
@@ -104,6 +113,6 @@ indefiniteArticles = [een]
 
 # Seasons
 winterSeason = [winter]
-springSeason = [spring]
-summerSeason = [summer]
-autumnSeason = [autumn, fall]
+springSeason = [lente, voorjaar]
+summerSeason = [zomer]
+autumnSeason = [herfst, najaar]
