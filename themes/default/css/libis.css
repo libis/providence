@@ -197,6 +197,79 @@ form#WatchedItemsListForm table#caItemList {
 }
 */
 
+/* style AAT more info */
+.caInformationServiceDetail table.aat_alternate tr:not(:first-child) {
+    border: 1px solid black;
+}
+.caInformationServiceDetail table.aat_alternate td {
+    padding: 10px;
+    margin: 10px;
+}
+.caInformationServiceDetail table.aat_alternate {
+    border-collapse: collapse;
+    border-spacing: 0 10px;
+}
+.caInformationServiceDetail table.aat_alternate tr td:first-child {
+    width: 30px;
+}
+
+
+/* prettify the listings */
+.caInformationServiceDetail table.aat_alternate tr td:first-child {
+    position: relative;
+    /*padding-left: 30px;*/
+    text-align: center;
+    vertical-align: middle;
+}
+
+.caInformationServiceDetail table.aat_alternate tr td:first-child::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+
+}
+
+.caInformationServiceDetail table.aat_alternate tr td:first-child span {
+    position: relative;
+    z-index: 1;
+}
+
+.caInformationServiceDetail table.aat_alternate tr td.nl::before{
+    background-color: yellow;
+}
+.caInformationServiceDetail table.aat_alternate tr td.fr::before{
+    background-color: #7DDE92;
+}
+.caInformationServiceDetail table.aat_alternate tr td.en::before{
+    background-color: #F8FFE5;
+}
+.caInformationServiceDetail table.aat_alternate tr td.it::before{
+    background-color: #3083DC;
+}
+.caInformationServiceDetail table.aat_alternate tr td.el::before{
+    background-color: #B0C6CE;
+}
+.caInformationServiceDetail table.aat_alternate tr td.sr::before{
+    background-color: #B2E4DB;
+}
+.caInformationServiceDetail table.aat_alternate tr td.he::before{
+    background-color: #A9FBD7;
+}
+.caInformationServiceDetail table.aat_alternate tr td.de::before{
+    background-color: #D7FDEC;
+}
+.caInformationServiceDetail table.aat_alternate tr td.es::before{
+    background-color: #2EBFA5;
+}
+.caInformationServiceDetail table.aat_alternate tr td.zh::before{
+    background-color: #EAFDCF;
+}
+
 /* visually separate repeating containers a little bit */
 .bundleContainer div.repeatingItem:nth-child(even) {
     /* background-color: #f2f2f2; */
