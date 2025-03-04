@@ -72,7 +72,12 @@ class InformationServiceController extends ActionController {
 				
 						if ($va_data && isset($va_data['results']) && is_array($va_data['results'])) {
 							foreach($va_data['results'] as $va_result) {
-								$va_items[] = ['label' => (string)$va_result['label'], 'idno' => (string)$va_result['idno'], 'url' => (string)$va_result['url']];
+								$va_items[] = array(
+									'label' => (string)$va_result['label'],
+									'idno' => (string)$va_result['idno'],
+									'url' => (string)$va_result['url'],
+									'value'=>(string)$va_result['value']
+								);
 							}
 						}
 					}
