@@ -56,17 +56,8 @@ dateBP = [bp]
 dateADIndicator = ad
 dateBCIndicator = bc
 ADBCTable = {
-	a.d. = ad,
-	n.Chr. = ad,
-	na Chr. = ad,
-	na Christus = ad,
-	AD = ad,
-	nc = ad,
-	b.c. = bc,
-	v.Chr. = bc,
-	voor Christus = bc,
-	vc = bc,
-	BC = bc
+	a.d. = ad, n.Chr. = ad, na Chr. = ad, na Chr = ad, na Christus = ad, nc = ad, ad. = ad, n. Chr.=ac, n Chr=ac, n Chr.=ac, n. Chr=ac
+	b.c. = bc, v.Chr. = bc, voor Christus = bc, voor Chr. = bc, voor Chr = bc, vc = bc, bc. = bc, v Chr=bc, v. Chr.=bc, v Chr.=bc, v. Chr=bc
 }
 
 nowDate = [nu]
