@@ -445,8 +445,8 @@ class InformationServiceAttributeValue extends AttributeValue implements IAttrib
                                     select: function(event, ui) {
                                         if(ui.item.value=='')ui.item.value=ui.item.label;
                                         ".((!$pb_for_search) ? "
-                                        jQuery('#{fieldNamePrefix}".$pa_element_info['element_id']."_{n}').val(ui.item.label + '|' + ui.item.idno + '|' + ui.item.url);" : 
-                                        "jQuery('#{fieldNamePrefix}".$pa_element_info['element_id']."_{n}').val(ui.item.label);"
+                                        jQuery('#{fieldNamePrefix}".$pa_element_info['element_id']."_{n}').val(ui.item.value + '|' + ui.item.idno + '|' + ui.item.url);" :
+                                        "jQuery('#{fieldNamePrefix}".$pa_element_info['element_id']."_{n}').val(ui.item.value);"
                                     )."
                                     }
                                 }
