@@ -1229,7 +1229,7 @@ class BundlableLabelableBaseModelWithAttributes extends LabelableBaseModelWithAt
 		}
 		
 		// Check source restrictions
- 		if ((bool)$this->getAppConfig()->get('perform_source_access_checking')) {
+ 		if (caSourceAccessControlIsEnabled($this)) {
 			$vn_source_access = $t_user->getSourceAccessLevel($this->tableName(), $this->getSourceID());
 			if ($vn_source_access < __CA_BUNDLE_ACCESS_READONLY__) {
 				return false;
@@ -1281,7 +1281,7 @@ class BundlableLabelableBaseModelWithAttributes extends LabelableBaseModelWithAt
 		}
 		
 		// Check source restrictions
- 		if ((bool)$this->getAppConfig()->get('perform_source_access_checking')) {
+ 		if (caSourceAccessControlIsEnabled($this)) {
 			$vn_source_access = $t_user->getSourceAccessLevel($this->tableName(), $this->getSourceID());
 			if ($vn_source_access < __CA_BUNDLE_ACCESS_EDIT__) {
 				return false;
@@ -1344,7 +1344,7 @@ class BundlableLabelableBaseModelWithAttributes extends LabelableBaseModelWithAt
 		}
 		
 		// Check source restrictions
- 		if ((bool)$config->get('perform_source_access_checking')) {
+ 		if (caSourceAccessControlIsEnabled($this)) {
 			$vn_source_access = $t_user->getSourceAccessLevel($table, $this->getSourceID());
 			if ($vn_source_access < __CA_BUNDLE_ACCESS_EDIT__) {
 				return false;
@@ -1394,7 +1394,7 @@ class BundlableLabelableBaseModelWithAttributes extends LabelableBaseModelWithAt
 		}
 		
 		// Check if user has access to this source
-		if ((bool)$this->getAppConfig()->get('perform_source_access_checking')) {
+		if (caSourceAccessControlIsEnabled($this)) {
 			$vn_source_access = $pa_options['request']->user->getSourceAccessLevel($this->tableName(), $this->getSourceID());
 			if ($vn_source_access == __CA_BUNDLE_ACCESS_NONE__) {
 				return;
@@ -1556,7 +1556,7 @@ class BundlableLabelableBaseModelWithAttributes extends LabelableBaseModelWithAt
 		}
 		
 		// Check if user has access to this source
-		if ((bool)$this->getAppConfig()->get('perform_source_access_checking')) {
+		if (caSourceAccessControlIsEnabled($this)) {
 			$vn_source_access = $pa_options['request']->user->getSourceAccessLevel($this->tableName(), $this->getSourceID());
 			if ($vn_source_access == __CA_BUNDLE_ACCESS_NONE__) {
 				return;
@@ -5249,7 +5249,7 @@ if (!$vb_batch) {
 						if (!$po_request->user->canDoAction('is_administrator') && ($po_request->getUserID() != $this->get('user_id'))) { break; }	// don't save if user is not owner
 						require_once(__CA_MODELS_DIR__.'/ca_users.php');
 	
-						$va_users_to_set = $va_user_effective_dates = [];
+						$va_users_to_set = $va_user_effective_dates = $download_versions = [];
 						foreach($_REQUEST as $vs_key => $vs_val) { 
 							if (preg_match("!^{$vs_placement_code}{$vs_form_prefix}_id(.*)$!", $vs_key, $va_matches)) {
 								$vs_effective_date = $po_request->getParameter("{$vs_placement_code}{$vs_form_prefix}_effective_date_".$va_matches[1], pString);
@@ -5259,10 +5259,10 @@ if (!$vb_batch) {
 									$va_users_to_set[$vn_user_id] = $vn_access;
 									$va_user_effective_dates[$vn_user_id] = $vs_effective_date;
 								}
+								$download_versions[$vn_user_id]['download_versions'] = $po_request->getParameter("{$vs_placement_code}{$vs_form_prefix}_download_version".$va_matches[1], pArray);
 							}
 						}
-						
-						$this->setUsers($va_users_to_set, $va_user_effective_dates);
+						$this->setUsers($va_users_to_set, $va_user_effective_dates, $download_versions);
 						
 						break;
 					# -------------------------------------
@@ -5300,7 +5300,7 @@ if (!$vb_batch) {
 							if (preg_match("!^{$vs_placement_code}{$vs_form_prefix}_access_([\d]+)$!", $vs_key, $va_matches)) {
 								$vn_role_id = $va_matches[1];
 								$vn_access = $po_request->getParameter($vs_key, pInteger);
-								if ($vn_access > 0) {
+								if (($vn_access > 0) || (in_array($this->tableName(), ['ca_editor_uis', 'ca_editor_ui_screens']))) {
 									$va_roles_to_set[$vn_role_id] = $vn_access;
 								} else {
 									$va_roles_to_remove[$vn_role_id] = true;
