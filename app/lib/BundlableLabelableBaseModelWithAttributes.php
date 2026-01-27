@@ -348,7 +348,6 @@ class BundlableLabelableBaseModelWithAttributes extends LabelableBaseModelWithAt
 
 					if (!isset($va_type_list[$this->getTypeID()])) {
 						$va_type_list = $this->getTypeList(array('directChildrenOnly' => false, 'returnHierarchyLevels' => true, 'item_id' => null));
-
 						$this->postError(2510, _t("<em>%1</em> is not a valid type for a child record of type <em>%2</em>", $va_type_list[$this->getTypeID()]['name_singular'], $va_type_list[$vn_parent_type_id]['name_singular']), "BundlableLabelableBaseModelWithAttributes->insert()", $this->tableName().'.'.$this->getTypeFieldName());
 								
 						if ($we_set_change_log_unit_id) { BaseModel::unsetChangeLogUnitID(); }
@@ -599,7 +598,24 @@ class BundlableLabelableBaseModelWithAttributes extends LabelableBaseModelWithAt
 		}
 		
 		if (isset($pa_options['user_id']) && $pa_options['user_id'] && $t_dupe->hasField('user_id')) { $t_dupe->set('user_id', $pa_options['user_id']); }
-		
+
+		// Only handle tables that actually have a 'set_code' field (eg. ca_sets)
+		if ($t_dupe->hasField('set_code')) {
+			$vs_code = trim((string)$this->get('set_code'));
+			if (!$vs_code) { $vs_code = 'set'; }
+
+			$vn_i = 1;
+			$t_lookup = Datamodel::getInstanceByTableName($table, true);
+
+			do {
+				$vs_new_code = $vs_code . '_' . $vn_i;
+				$vn_i++;
+				$t_lookup->clear(); // avoid stale state between loads
+			} while ($t_lookup->load(['set_code' => $vs_new_code]));
+
+			$t_dupe->set('set_code', $vs_new_code);
+		}
+
 		$t_dupe->insert(['forDuplication' => true]);
 		
 		if ($t_dupe->numErrors()) {
@@ -4318,6 +4334,17 @@ if (!$batch) {
 			
 			if ($batch && ($po_request->getParameter($vs_placement_code.$vs_form_prefix.'_batch_mode', pString) !== '_replace_')) { continue; }
 			
+			// Skip if not in request - may be filtered off of form
+			if(
+				!$po_request->parameterExists("{$vs_placement_code}{$vs_form_prefix}_new_parent_id")
+				&&
+				!$po_request->parameterExists("{$vs_placement_code}_new_parent_id")
+				&&
+				!$po_request->parameterExists("{$vs_placement_code}{$vs_form_prefix}_move_selection")
+			) {
+				continue;
+			}
+			
 			$parent_tmp = explode("-", $po_request->getParameter(["{$vs_placement_code}{$vs_form_prefix}_new_parent_id", "{$vs_placement_code}_new_parent_id"], pString));
 			
 			$multiple_move_selection = array_filter(explode(";", $po_request->getParameter("{$vs_placement_code}{$vs_form_prefix}_move_selection", pString)), function($v) {
@@ -4351,7 +4378,7 @@ if (!$batch) {
 								
 								$t->set($this->HIERARCHY_PARENT_ID_FLD, $vn_parent_id); 
 								if(!$t->update()) {
-									$this->postError(2510, _t('Could not move item [%1]: %2', $t->getPrimaryKey(), join("; ", $this->getErrors())), "BundlableLabelableBaseModelWithAttributes->saveBundlesForScreen()");
+									$this->postError(2510, _t('Could not move item [%1]: %2', $t->getPrimaryKey(), join("; ", $t->getErrors())), "BundlableLabelableBaseModelWithAttributes->saveBundlesForScreen()");
 									$po_request->addActionErrors($this->errors());
 								}
 							}
@@ -4365,11 +4392,11 @@ if (!$batch) {
 								$t->set($t->HIERARCHY_PARENT_ID_FLD, null);
 								$t->set($t->HIERARCHY_ID_FLD, $t->getPrimaryKey());
 								if(!$t->update()) {
-									$this->postError(2510, _t('Could not move object under collection: %1', join("; ", $this->getErrors())), "BundlableLabelableBaseModelWithAttributes->saveBundlesForScreen()");
+									$this->postError(2510, _t('Could not move object under collection: %1', join("; ", $t->getErrors())), "BundlableLabelableBaseModelWithAttributes->saveBundlesForScreen()");
 									$po_request->addActionErrors($this->errors());
 								}
 								if (!($t->addRelationship('ca_collections', $vn_parent_id, $coll_rel_type))) {
-									$this->postError(2510, _t('Could not move object under collection: %1', join("; ", $this->getErrors())), "BundlableLabelableBaseModelWithAttributes->saveBundlesForScreen()");
+									$this->postError(2510, _t('Could not move object under collection: %1', join("; ", $t->getErrors())), "BundlableLabelableBaseModelWithAttributes->saveBundlesForScreen()");
 									$po_request->addActionErrors($this->errors());
 								}
 							}						
