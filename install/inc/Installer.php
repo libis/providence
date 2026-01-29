@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2011-2024 Whirl-i-Gig
+ * Copyright 2011-2026 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -124,8 +124,7 @@ class Installer {
 		
 		if(!$skip_load) {
 			if(!is_array($data)) {
-				// TODO: get error from parser
-				$this->addError('init', _t('Could not load profile.'));
+				$this->addError('init', _t('Profile is invalid'));
 				return false;
 			}
 			$this->parsed_data = $data;
@@ -134,9 +133,17 @@ class Installer {
 		if($log_output) {
 			require_once(__CA_LIB_DIR__.'/Logging/KLogger/KLogger.php');
 			// @todo make this configurable or get from app.conf?
-			$this->log = new \KLogger(__CA_BASE_DIR__ . '/app/log', \KLogger::DEBUG);
+			$this->log = new \KLogger(__CA_LOG_DIR__, \KLogger::DEBUG);
 			$this->logging_status = true;
 		}
+	}
+	# --------------------------------------------------
+	/**
+	 *
+	 * @return Db
+	 */
+	public function getDb() {
+		return $this->db;
 	}
 	# --------------------------------------------------
 	/**
@@ -153,10 +160,16 @@ class Installer {
 		}
 		
 		
+		$this->notices = $this->warnings = $this->errors = [];
 		if(!($parser = self::profileParser($path))) { return null; }
-		
-		$data = $parser->parse($directory, $profile, $options);
-		
+
+		try {
+			$data = $parser->parse($directory, $profile, $options);
+		} catch(\Exception $e) {
+			$this->errors = [
+				['stage' => 'INIT', 'message' => _t('Could not parse profile: %1', $e->getMessage())] 
+			];
+		}
 		$this->notices = $parser->getNotices();
 		$this->warnings = $parser->getWarnings();
 		$this->errors = $parser->getErrors();
@@ -626,9 +639,11 @@ class Installer {
 			}
 
 
-			if($list["deleted"] && $t_list->getPrimaryKey()) {
-				$this->logStatus(_t('Deleting list %1', $list_code));
-				$t_list->delete(true);
+			if($list["deleted"]) {
+				if($t_list->getPrimaryKey()) {
+					$this->logStatus(_t('Deleting list %1', $list_code));
+					$t_list->delete(true);
+				}
 				continue;
 			}
 
@@ -830,9 +845,11 @@ class Installer {
 			$this->logStatus(_t('Metadata element with code %1 is new', $element_code));
 		}
 
-		if($element['deleted'] && $t_md_element->getPrimaryKey()) {
-			$this->logStatus(_t('Deleting metadata element with code %1', $element_code));
-			$t_md_element->delete(true, ['hard' => false]);
+		if($element['deleted']) {
+			if($t_md_element->getPrimaryKey()) {
+				$this->logStatus(_t('Deleting metadata element with code %1', $element_code));
+				$t_md_element->delete(true, ['hard' => false]);
+			}
 			return false; // we don't want the postprocessing to kick in. our work here is done.
 		}
 
@@ -993,7 +1010,7 @@ class Installer {
 		$uis = $this->parsed_data['userInterfaces'];
 	
 		foreach($uis as $ui_code => $ui) {
-			$type = $ui["type"];
+			$type = $ui_table = $ui["type"];
 			if (!($type = \Datamodel::getTableNum($type))) {
 				$this->addError('processUserInterfaces', _t("Invalid type %1 for UI code %2", $type, $ui_code));
 				return false;
@@ -1012,9 +1029,11 @@ class Installer {
 				$this->logStatus(_t('User interface with code %1 already exists', $ui_code));
 			}
 
-			if($ui['deleted'] && $t_ui->getPrimaryKey()) {
-				$this->logStatus(_t('Deleting user interface with code %1', $ui_code));
-				$t_ui->delete(true, ['hard' => true]);
+			if($ui['deleted']) {
+				if($t_ui->getPrimaryKey()) {
+					$this->logStatus(_t('Deleting user interface with code %1', $ui_code));
+					$t_ui->delete(true, ['hard' => true]);
+				}
 				continue;
 			}
 
@@ -1098,16 +1117,18 @@ class Installer {
 					$this->logStatus(_t('Screen with code %1 for user interface with code %2 is new', $screen_idno, $ui_code));
 				}
 
-				if($screen['deleted'] && $t_ui_screens->getPrimaryKey()) {
-					$this->logStatus(_t('Deleting screen with code %1 for user interface with code %2', $screen_idno, $ui_code));
-					$t_ui_screens->delete(true, ['hard' => true]);
+				if($screen['deleted']) {
+					if($t_ui_screens->getPrimaryKey()) {
+						$this->logStatus(_t('Deleting screen with code %1 for user interface with code %2', $screen_idno, $ui_code));
+						$t_ui_screens->delete(true, ['hard' => true]);
+					}
 					continue;
 				}
 
 				$t_ui_screens->set('idno',$screen_idno);
 				$t_ui_screens->set('ui_id', $ui_id);
 				$t_ui_screens->set('is_default', $is_default);
-				$t_ui_screens->set('rank', $rank);
+				$t_ui_screens->set('rank', $screen["rank"] ?? $rank);
 				if ($color = $screen["color"]) { $t_ui_screens->set('color', $color); }
 
 				if($t_ui_screens->getPrimaryKey()) {
@@ -1126,7 +1147,7 @@ class Installer {
 
 				self::addLabels($t_ui_screens, $screen['labels']);
 			
-				$available_bundles = $t_ui_screens->getAvailableBundles(null, ['dontCache' => true]);
+				$available_bundles = $t_ui_screens->getAvailableBundles($t_instance->tableNum(), ['dontCache' => true]);
 
 				// nuke previous placements. there shouldn't be any if we're installing from scratch.
 				// if we're updating, we expect the list of placements to include all of them!
@@ -1205,6 +1226,12 @@ class Installer {
 					$placement_code = $placement["code"];
 					$bundle_type_restrictions = $placement["typeRestrictions"];
 					$bundle = trim((string)$placement['bundle']);
+					
+					$bundle_proc = preg_replace("!^ca_attribute_!", "", $bundle);
+					$tmp = explode('.', $bundle_proc);
+					if(!\Datamodel::tableExists($tmp[0])) {
+						$bundle_proc = "{$ui_table}.{$bundle_proc}";
+					}
 
 					if (is_array($bundle_type_restrictions) && sizeof($bundle_type_restrictions)) {
 						$bundle_type_restrictions_types = array_map(function($v) { return $v['type']; }, $bundle_type_restrictions);
@@ -1240,14 +1267,14 @@ class Installer {
 					
 					$this->logStatus(_t('Adding bundle %1 with code %2 for screen with code %3 and user interface with code %4', $bundle, $placement_code, $screen_idno, $ui_code));
 
-					if (!($t_placement = $t_ui_screens->addPlacement($bundle, $placement_code, [], null, ['additional_settings' => $available_bundles[$bundle]['settings'], 'returnInstance' => true]))) {
+					if (!($t_placement = $t_ui_screens->addPlacement($bundle, $placement_code, [], null, ['additional_settings' => $available_bundles[$bundle_proc]['settings'], 'returnInstance' => true]))) {
 						$this->logStatus(join("; ", $t_ui_screens->getErrors()));
 					} else {
 						$settings = $this->_processSettings($t_placement, $placement['settings'], [
-							'table' => $table, 
-							'leftTable' => $table, 
+							'table' => $table ? $table : $type, 
+							'leftTable' => $table ? $table : $type, 
 							'rightTable' => \Datamodel::tableExists($type) ? $type : null, 
-							'settingsInfo' => array_merge($t_placement->getAvailableSettings(), is_array($available_bundles[$bundle]['settings']) ? $available_bundles[$bundle]['settings'] : []),
+							'settingsInfo' => array_merge($t_placement->getAvailableSettings(), is_array($available_bundles[$bundle_proc]['settings']) ? $available_bundles[$bundle_proc]['settings'] : []),
 							'source' => "UserInterface:{$ui_code}:Screen {$screen_idno}:Placement {$placement_code}"
 						]);
 						$t_placement->update();
@@ -1459,9 +1486,11 @@ class Installer {
 				$this->logStatus(_t('Relationship type with code %1 is new', $type_code));
 			}
 
-			if($type["deleted"] && $t_rel_type->getPrimaryKey()) {
-				$this->logStatus(_t('Deleting relationship type with code %1', $type_code));
-				$t_rel_type->delete(true);
+			if($type["deleted"]) {
+				if($t_rel_type->getPrimaryKey()) {
+					$this->logStatus(_t('Deleting relationship type with code %1', $type_code));
+					$t_rel_type->delete(true);
+				}
 				continue;
 			}
 
@@ -1551,9 +1580,11 @@ class Installer {
 				$this->logStatus(_t('User role with code %1 already exists', $role_code));
 			}
 
-			if($role["deleted"] && $t_role->getPrimaryKey()) {
-				$this->logStatus(_t('Deleting user role with code %1', $role_code));
-				$t_role->delete(true);
+			if($role["deleted"]) {
+				if($t_role->getPrimaryKey()) {
+					$this->logStatus(_t('Deleting user role with code %1', $role_code));
+					$t_role->delete(true);
+				}
 				continue;
 			}
 
@@ -1672,9 +1703,11 @@ class Installer {
 				$this->logStatus(_t('Display with code %1 already exists', $display_code));
 			}
 
-			if($display["deleted"] && $t_display->getPrimaryKey()) {
-				$t_display->delete(true);
-				$this->logStatus(_t('Deleting display with code %1', $display_code));
+			if($display["deleted"]) {
+				if($t_display->getPrimaryKey()) {
+					$t_display->delete(true);
+					$this->logStatus(_t('Deleting display with code %1', $display_code));
+				}
 				continue;
 			}
 
@@ -1862,9 +1895,11 @@ class Installer {
 				$this->logStatus(_t('Search form with code %1 already exists', $form_code));
 			}
 
-			if($form["deleted"] && $t_form->getPrimaryKey()) {
-				$this->logStatus(_t('Deleting search form with code %1', $form_code));
-				$t_form->delete(true);
+			if($form["deleted"]) {
+				if($t_form->getPrimaryKey()) {
+					$this->logStatus(_t('Deleting search form with code %1', $form_code));
+					$t_form->delete(true);
+				}
 				continue;
 			}
 
@@ -2049,8 +2084,10 @@ class Installer {
 					$t_group = new \ca_user_groups();
 				}
 
-				if($group["deleted"] && $t_group->getPrimaryKey()) {
-					$t_group->delete(true);
+				if($group["deleted"]) {
+					if($t_group->getPrimaryKey()) {
+						$t_group->delete(true);
+					}
 					continue;
 				}
 
@@ -2160,9 +2197,11 @@ class Installer {
 				$this->logStatus(_t('Metadata alert with code %1 already exists', $alert_code));
 			}
 
-			if($alert["deleted"] && $t_alert->getPrimaryKey()) {
-				$this->logStatus(_t('Deleting metadata alert with code %1', $alert_code));
-				$t_alert->delete(true);
+			if($alert["deleted"]) {
+				if($t_alert->getPrimaryKey()) {
+					$this->logStatus(_t('Deleting metadata alert with code %1', $alert_code));
+					$t_alert->delete(true);
+				}
 				continue;
 			}
 

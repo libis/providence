@@ -21,6 +21,25 @@ create table ca_application_vars
 
 
 /*==========================================================================*/
+create table ca_unsaved_edits
+(
+   edit_id                        int                         	 not null AUTO_INCREMENT,
+   edit_datetime                  int unsigned                   not null,
+   user_id                        int unsigned,
+   table_num                      tinyint unsigned               not null,
+   row_id                         int unsigned                   not null,
+   snapshot                       longblob                       not null,
+   
+   primary key (edit_id)
+) engine=innodb CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+
+create index i_datetime on ca_unsaved_edits(edit_datetime);
+create index i_user_id on ca_unsaved_edits(user_id);
+create index i_edit on ca_unsaved_edits(row_id, table_num);
+create index i_table_num on ca_unsaved_edits(table_num);
+
+
+/*==========================================================================*/
 create table ca_change_log
 (
    log_id                         bigint                         not null AUTO_INCREMENT,
@@ -620,6 +639,7 @@ create table ca_object_lots
 (
    lot_id                         int unsigned                   not null AUTO_INCREMENT,
    type_id                        int unsigned                   not null,
+   parent_id                      int unsigned,
    lot_status_id                  int unsigned                   not null,
    idno_stub                      varchar(255)                   not null,
    idno_stub_sort                 varchar(255)                   not null,
@@ -646,13 +666,16 @@ create table ca_object_lots
    deaccession_type_id            int unsigned                   null,
    source_id                      int unsigned,
    source_info                    longtext                       not null,
+   hier_lot_id                    int unsigned                   not null,
+   hier_left                      decimal(30,20) unsigned        not null,
+   hier_right                     decimal(30,20) unsigned        not null,
    deleted                        tinyint unsigned               not null default 0,
-   `rank`                           int unsigned                   not null default 0,
-   acl_inherit_from_parent         tinyint unsigned              not null default 0,
-   access_inherit_from_parent      tinyint unsigned              not null default 0,
-   submission_user_id               int unsigned                   null,
+   `rank`                         int unsigned                   not null default 0,
+   acl_inherit_from_parent        tinyint unsigned               not null default 0,
+   access_inherit_from_parent     tinyint unsigned               not null default 0,
+   submission_user_id             int unsigned                   null,
    submission_group_id            int unsigned                   null,
-   submission_status_id              int unsigned                   null,
+   submission_status_id           int unsigned                   null,
    submission_via_form            varchar(100)                   null,
    submission_session_id          int unsigned                   null,
    primary key (lot_id),
@@ -660,6 +683,9 @@ create table ca_object_lots
    constraint fk_ca_object_lots_type_id foreign key (type_id)
       references ca_list_items (item_id) on delete restrict on update restrict,
       
+   constraint fk_ca_object_lots_parent_id foreign key (parent_id)
+      references ca_object_lots (lot_id) on delete restrict on update restrict,
+         
     constraint fk_ca_object_lots_source_id foreign key (source_id)
       references ca_list_items (item_id) on delete restrict on update restrict,
       
@@ -707,6 +733,9 @@ create index i_submission_group_id on ca_object_lots(submission_group_id);
 create index i_submission_status_id on ca_object_lots(submission_status_id);
 create index i_submission_via_form on ca_object_lots(submission_via_form);
 create index i_submission_session_id on ca_object_lots(submission_session_id);
+create index i_parent_id on ca_object_lots(parent_id);
+create index i_hier_left on ca_object_lots(hier_left);
+create index i_hier_right on ca_object_lots(hier_right);
 
 
 /*==========================================================================*/
@@ -809,6 +838,7 @@ create table ca_object_representation_labels
    sdatetime                      decimal(30,20),
    edatetime                      decimal(30,20),
    access                         tinyint unsigned               not null default 0,
+   notes                          text                           not null,
    
    primary key (label_id),
    
@@ -996,6 +1026,7 @@ create table ca_occurrence_labels
    sdatetime                      decimal(30,20),
    edatetime                      decimal(30,20),
    access                         tinyint unsigned               not null default 0,
+   notes                          text                           not null,
    
    primary key (label_id),
    constraint fk_ca_occurrence_labels_type_id foreign key (type_id)
@@ -1139,6 +1170,7 @@ create table ca_collection_labels
    sdatetime                      decimal(30,20),
    edatetime                      decimal(30,20),
    access                         tinyint unsigned               not null default 0,
+   notes                          text                           not null,
    
    primary key (label_id),
    constraint fk_ca_collection_labels_type_id foreign key (type_id)
@@ -1263,6 +1295,7 @@ create table ca_place_labels
    sdatetime                      decimal(30,20),
    edatetime                      decimal(30,20),
    access                         tinyint unsigned               not null default 0,
+   notes                          text                           not null,
    
    primary key (label_id),
    constraint fk_ca_place_labels_type_id foreign key (type_id)
@@ -1302,6 +1335,7 @@ create table ca_storage_location_labels
    sdatetime                      decimal(30,20),
    edatetime                      decimal(30,20),
    access                         tinyint unsigned               not null default 0,
+   notes                          text                           not null,
    
    primary key (label_id),
    constraint fk_ca_storage_location_labels_locale_id foreign key (locale_id)
@@ -1414,6 +1448,7 @@ create table ca_loan_labels (
    sdatetime                      decimal(30,20),
    edatetime                      decimal(30,20),
    access                         tinyint unsigned               not null default 0,
+   notes                          text                           not null,
    
    primary key (label_id),
    
@@ -1511,6 +1546,7 @@ create table ca_movement_labels (
    sdatetime                      decimal(30,20),
    edatetime                      decimal(30,20),
    access                         tinyint unsigned               not null default 0,
+   notes                          text                           not null,
    
    primary key (label_id),
    
@@ -1885,6 +1921,7 @@ create table ca_object_lot_labels
    sdatetime                      decimal(30,20),
    edatetime                      decimal(30,20),
    access                         tinyint unsigned               not null default 0,
+   notes                          text                           not null,
    
    primary key (label_id),
    constraint fk_ca_object_lot_labels_lot_id foreign key (lot_id)
@@ -2158,6 +2195,7 @@ create table ca_object_labels
    sdatetime                      decimal(30,20),
    edatetime                      decimal(30,20),
    access                         tinyint unsigned               not null default 0,
+   notes                          text                           not null,
    
    primary key (label_id),
    constraint fk_ca_object_labels_type_id foreign key (type_id)
@@ -2946,6 +2984,7 @@ create table ca_entity_labels
    edatetime                      decimal(30,20),
    access                         tinyint unsigned               not null default 0,
    checked                        tinyint unsigned               not null default 0,
+   notes                          text                           not null,
    
    primary key (label_id),
    constraint fk_ca_entity_labels_type_id foreign key (type_id)
@@ -5200,7 +5239,8 @@ create table ca_items_x_tags (
 	table_num	tinyint unsigned not null,
 	row_id		int unsigned not null,
 	
-	tag_id		int unsigned not null,
+	tag_id		int unsigned null,
+	item_id		int unsigned null,
 	
 	user_id		int unsigned,
 	access		tinyint unsigned not null default 0,
@@ -5217,6 +5257,7 @@ create table ca_items_x_tags (
 	key i_row_id (row_id),
 	key i_table_num (table_num),
 	key i_tag_id (tag_id),
+	key i_item_id (item_id),
 	key i_user_id (user_id),
 	key i_access (access),
 	key i_created_on (created_on),
@@ -5225,6 +5266,9 @@ create table ca_items_x_tags (
 	
    constraint fk_ca_items_x_tags_tag_id foreign key (tag_id)
       references ca_item_tags (tag_id) on delete restrict on update restrict,
+      
+   constraint fk_ca_items_x_tags_item_id foreign key (item_id)
+      references ca_list_items (item_id) on delete restrict on update restrict,
       
    constraint fk_ca_items_x_tags_user_id foreign key (user_id)
       references ca_users (user_id) on delete restrict on update restrict,
@@ -7819,6 +7863,7 @@ create table ca_history_tracking_current_value_labels
    sdatetime                      decimal(30,20),
    edatetime                      decimal(30,20),
    access                         tinyint unsigned               not null default 0,
+   notes                          text                           not null,
    
    primary key (label_id),
    constraint fk_ca_history_tracking_current_value_labels_type_id foreign key (type_id)
@@ -7862,6 +7907,7 @@ create table if not exists ca_ip_bans (
    reason                    varchar(255)                   not null,
    created_on                int unsigned                   not null,
    expires_on                int unsigned                   null,
+   details                   text                           not null,
    
    ip_addr		             varchar(39)                    not null,
    
@@ -7954,4 +8000,4 @@ create table ca_schema_updates (
 ) engine=innodb CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 /* Indicate up to what migration this schema definition covers */
-INSERT IGNORE INTO ca_schema_updates (version_num, datetime) VALUES (204, unix_timestamp());
+INSERT IGNORE INTO ca_schema_updates (version_num, datetime) VALUES (209, unix_timestamp());

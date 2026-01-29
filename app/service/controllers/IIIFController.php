@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2016-2023 Whirl-i-Gig
+ * Copyright 2016-2025 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -47,6 +47,7 @@ class IIIFController extends BaseServiceController {
 			$this->getView()->setVar('pretty_print', true);
 		}
 
+		
 		$this->getView()->setVar('content', $va_content);
 	}
 	# -------------------------------------------------------
@@ -55,8 +56,9 @@ class IIIFController extends BaseServiceController {
 	 */
 	public function manifest() {
 		$path = explode('/', $this->request->getPathInfo()); // path = /IIIF/manifest/<identifier> ; identifier index = 3
+		$options = $this->getRequest()->getParameters();
 		try {
-			$manifest = IIIFService::manifest($path[3], $this->getRequest());
+			$manifest = IIIFService::manifest($path[3], $options);
 		} catch(IIIFAccessException $e) {
 			$this->getView()->setVar('errors', array($e->getMessage()));
 			$this->render('json_error.php');
@@ -69,6 +71,8 @@ class IIIFController extends BaseServiceController {
 
 		$this->getView()->setVar('dontEmitOK', true);
 		$this->getView()->setVar('content', $manifest);
+		
+		$this->getResponse()->setContentType('application/json');
 		$this->render('json.php');
 	}
 	# -------------------------------------------------------
@@ -98,6 +102,8 @@ class IIIFController extends BaseServiceController {
 
 		$this->getView()->setVar('dontEmitOK', true);
 		$this->getView()->setVar('content', $clip_list);
+		
+		$this->getResponse()->setContentType('application/json');
 		$this->render('json.php');
 	}
 	# -------------------------------------------------------

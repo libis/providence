@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2015-2021 Whirl-i-Gig
+ * Copyright 2015-2026 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -79,7 +79,6 @@ class RelatedListController extends BaseSearchController {
 		AssetLoadManager::register('panel');
 		AssetLoadManager::register('sortableUI');
 
-		
 		// related table, e.g. ca_entities
 		$vs_related_table = $this->getRequest()->getParameter('relatedTable', pString);
 		// relationship table between subject and related, i.e. ca_objects_x_entities --
@@ -91,6 +90,7 @@ class RelatedListController extends BaseSearchController {
 		$vs_id_prefix = $this->getRequest()->getParameter('idPrefix', pString);
 		
 		// get request data
+		$settings = [];
 		if ($placement_id = $this->getRequest()->getParameter('placement_id', pInteger)) {
 			Session::setVar("P{$placement_id}_last_export_format", $this->getRequest()->getParameter('export_format', pString));
 			
@@ -107,13 +107,14 @@ class RelatedListController extends BaseSearchController {
 			if (!($t_instance->load($vn_primary_id))) { 
 				throw new ApplicationException(_('Invalid id'));
 			}
+			
+			$settings = $placement->getSettings();
 			if(Datamodel::getInstance($placement->get('bundle_name'), true)) {
 				$va_relation_ids = $t_instance->getRelatedItems($placement->get('bundle_name'), ['returnAs' => 'ids']);
 			} else {
 				switch($placement->get('bundle_name')) {
 					case 'history_tracking_current_contents':
-						$settings = $placement->getSettings();
-						if($qr = $t_instance->getContents($settings['policy'] ?? null)) {
+						if($qr = $t_instance->getContents($settings['policy'] ?? null, ['expandHierarchically' => $settings['expandHierarchically'] ?? false])) {
 							$va_relation_ids = $qr->getAllFieldValues($qr->primaryKey());
 						}
 						break;
@@ -122,7 +123,8 @@ class RelatedListController extends BaseSearchController {
 						break;
 				}
 			}
-		} else {
+		}
+		if(!is_array($va_relation_ids) || !sizeof($va_relation_ids)) {
 			// ... otherwise use old-style giant list of related ID's passed in form
 			$va_relation_ids = json_decode($this->getRequest()->getParameter('ids', pString), true);
 		}
@@ -157,7 +159,7 @@ class RelatedListController extends BaseSearchController {
 		if(!$t_related || !$t_related_rel) { throw new Exception(_t('Invalid table name')); }
 
 		// we need the rel table to translate the incoming relation_ids to primary keys in the related table for the list search result
-		$o_interstitial_res = caMakeSearchResult($vs_related_rel_table, array_keys($va_relation_ids));
+		$o_interstitial_res = caMakeSearchResult($vs_related_rel_table, array_keys($va_relation_ids ?? []));
 
 		$va_relation_id_typenames = array();
 		while($o_interstitial_res->nextHit()) {
@@ -186,7 +188,8 @@ class RelatedListController extends BaseSearchController {
 			'relatedRelTable' => $vs_related_rel_table,
 			'primaryTable' => $vs_primary_table,
 			'primaryID' => $vn_primary_id,
-			'idPrefix' => $vs_id_prefix
+			'idPrefix' => $vs_id_prefix,
+			'placement_id' => $placement_id
 		);
 
 		$vs_url_string = '';
@@ -197,6 +200,8 @@ class RelatedListController extends BaseSearchController {
 
 		$this->getView()->setVar('relatedListParams', $va_additional_search_controller_params);
 		$this->getView()->setVar('relatedListURLParamString', $vs_url_string);
+		
+		$this->getView()->setVar('settings', $settings);
 
 		$vs_sort_direction = $this->opo_result_context->getCurrentSortDirection();
 
@@ -216,7 +221,7 @@ class RelatedListController extends BaseSearchController {
 		$va_res = caMakeSearchResult($t_related->tableName(), $va_relation_ids, $va_search_opts);
 		$o_res = $va_res['result'];
 		$va_relation_ids_to_related_ids = [];
-		$x = array_flip($va_relation_ids);
+		$x = array_flip($va_relation_ids ?? []);
 		foreach($va_res['index'] as $rel_id) {
 			$va_relation_ids_to_related_ids[$x[$rel_id]] = $rel_id;
 		}
