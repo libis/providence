@@ -1529,10 +1529,18 @@ class BaseModel extends BaseObject {
 										$this->postError(1103, _t('Value %1 is not in list %2', $vm_value, $vs_list_code), 'BaseModel->set()', $this->tableName().'.'.$vs_field);
 										return false;
 									}
-								} elseif (($vs_list_code = $this->getFieldInfo($vs_field, "LIST")) && in_array($vs_field, ['access', 'status'], true) && (!is_numeric($vm_value))) {
+								} elseif (($vs_list_code = $this->getFieldInfo($vs_field, "LIST")) && in_array($vs_field, ['access', 'status'], true)) {
 									$t_list = Datamodel::getInstance('ca_lists', true);
-									$item = $t_list->getItemFromListByItemID($vs_list_code, $vn_id);
-									$vm_value = $item['item_value'] ?? null;
+									$item = null;
+									if(is_numeric($vm_value)) {
+										if(!($item = $t_list->getItemFromListByItemValue($vs_list_code, $vm_value))) {
+											$item = $t_list->getItemFromListByItemID($vs_list_code, (int)$vm_value);
+										}
+									}
+									if(!$item) {
+										$item = $t_list->getItemFromList($vs_list_code, $vm_value);
+									}
+									$vm_value = is_numeric($item['item_value'] ?? null) ? $item['item_value'] : 0;
 								} else {
 									$vm_orig_value = $vm_value;
 									$vm_value = preg_replace("/[^\d\-\.]+/", "", $vm_value); # strip non-numeric characters
@@ -2492,6 +2500,7 @@ class BaseModel extends BaseObject {
 				// Force access and status to valid defaults
 				if(strlen($vs_field_value) === 0) {
 					$vs_field_value = caGetDefaultItemValue($va_attr['LIST']);
+					if(!is_numeric($vs_field_value)) { $vs_field_value = 0; }
 				}
 			}
 
@@ -9718,7 +9727,9 @@ $pa_options["display_form_field_tips"] = true;
 
 
 						if (!isset($pa_options['no_tooltips']) || !$pa_options['no_tooltips']) {
-							TooltipManager::add('#'.$vs_field_id, "<div class='tooltipHead'>{$vs_field_label}</div>".((isset($pa_options["description"]) && $pa_options["description"]) ? $pa_options["description"] : $va_attr["DESCRIPTION"]), $pa_options['tooltip_namespace']);
+							if(strlen($tt_content = ((isset($pa_options["description"]) && $pa_options["description"]) ? $pa_options["description"] : $va_attr["DESCRIPTION"]))) {
+								TooltipManager::add('#'.$vs_field_id, "<div class='tooltipHead'>{$vs_field_label}</div>".$tt_content, $pa_options['tooltip_namespace']);
+							}
 						}
 					}
 
